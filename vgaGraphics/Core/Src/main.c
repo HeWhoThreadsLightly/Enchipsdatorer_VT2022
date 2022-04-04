@@ -21,7 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
-
+#include "vga.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -30,7 +30,9 @@
 /* USER CODE END PTD */
 
 /* Private define ------------------------------------------------------------*/
+
 /* USER CODE BEGIN PD */
+
 /* USER CODE END PD */
 
 /* Private macro -------------------------------------------------------------*/
@@ -55,11 +57,7 @@ static void MX_USART2_UART_Init(void);
 
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
-typedef struct {
-	char value;
-}Colour;
 
-Colour lineBuff [800*16];
 
 /* USER CODE END 0 */
 
@@ -94,6 +92,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   lineBuff[20].value = 2;
+  setRGB(&lineBuff[20], 2, 3, 1);
   /* USER CODE END 2 */
 
   /* Infinite loop */
