@@ -14,11 +14,9 @@ typedef struct {
 	char value;
 }Color;
 
-enum { vgaDownscale = 2 };
-enum { horiRes = 640/vgaDownscale};
-enum { vertRes = 400/vgaDownscale};
-enum { horiChar = horiRes/8};
-enum { vertChar = horiRes/8};
+enum { vgaUpscale = 2 };
+enum { horiRes = 640/vgaUpscale};
+enum { vertRes = 400/vgaUpscale};
 
 extern Color lineBuff [];//double  buffered
 extern Color screenBuff [];

@@ -7,6 +7,7 @@
 
 
 #include "vga.h"
+//#include "codepage-437-bmp.h"
 
 /*
 http://tinyvga.com/vga-timing/640x400@70Hz
@@ -36,26 +37,44 @@ Whole frame		449			14.268123138034
  *
  */
 
-enum { horiAria = 640/vgaDownscale};
-enum { horiFront = 16/vgaDownscale};
-enum { horiSync = 96/vgaDownscale};
-enum { horiBack = 48/vgaDownscale};
-enum { horiWhole = 800/vgaDownscale};
+//enum { horiRes = 640/vgaUpscale};//defined in header
+enum { horiFront = 16/vgaUpscale};
+enum { horiSync = 96/vgaUpscale};
+enum { horiBack = 48/vgaUpscale};
+enum { horiWhole = 800/vgaUpscale};
 
-enum { vertAria = 400};
+//enum { vertRes = 400/vgaUpscale};//defined in header
+enum { vertArea = 400 };
 enum { vertFront = 12};
 enum { vertSync = 2};
 enum { vertBack = 35};
 enum { vertWhole = 449};
 
 
-Color lineBuff [horiWhole*2] = {0};//double  buffered
-Color screenBuff[horiRes*vertRes] = {0};//rows*columns
-Color backgroundBuff [horiChar*vertChar] = {0};//rows*columns
-Color forgroundBuff [horiChar*vertChar] = {0};//rows*columns
-Color charBuff [horiChar*vertChar] = {0};//rows*columns
+_Alignas(uint32_t) Color lineBuff [horiWhole*2] = {0};//double  buffered
+_Alignas(uint32_t) Color screenBuff[horiRes*vertRes] = {0};//rows*columns
 
-int vgaCharMode = 0;
+//todo remove and replace with a setCharAtXY function
+
+TIM_HandleTypeDef vgaPixelTimer;
+DMA_HandleTypeDef vgaCircularDMA;
+DMA_HandleTypeDef memcopyDMA;
+
+void checkAsserts(){//check memory layout assumptions
+	//32 bit accesses is used to sped up dma transfers alignment of start and end is needed to avoid manual copying of leading and trailing bytes
+	_Static_assert((int)&lineBuff % sizeof(uint32_t) == 0, "Line buff is not aligned for uint32 accesses");
+	_Static_assert((int)&screenBuff % sizeof(uint32_t) == 0, "Screen buff is not aligned for uint32 accesses");
+
+	//checks that 32 bit mode works for all subsets of the line buffer
+	_Static_assert(horiRes % sizeof(uint32_t) == 0, "Horizontal area is not 32 bit aligned");
+	_Static_assert(horiFront % sizeof(uint32_t) == 0, "Horizontal front is not 32 bit aligned");
+	_Static_assert(horiSync % sizeof(uint32_t) == 0, "Horizontal sync is not 32 bit aligned");
+	_Static_assert(horiBack % sizeof(uint32_t) == 0, "Horizontal back is not 32 bit aligned");
+	_Static_assert(horiWhole % sizeof(uint32_t) == 0, "Horizontal whole line is not 32 bit aligned");
+
+	_Static_assert(horiWhole == horiRes+horiFront+horiSync+horiBack, "Horizontal vga configuration does not sum up");
+	_Static_assert(vertWhole == vertArea+vertFront+vertSync+vertBack, "Vertical vga configuration does not sum up");
+}
 
 void setRed(Color * c, char r){
 	c->value = (c->value & 0b11001111) | r << 4;
@@ -76,148 +95,204 @@ void setVblank(Color * c){
 	c->value = 0b1000000;
 }
 
-void clearVisibleAria(Color * lineBuffPart){
+void memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength){
+	//todo enable source increment if it is disabled
+	HAL_DMA_Start_IT(&memcopyDMA, (uint32_t)SrcAddress, (uint32_t)DstAddress, DataLength);
+	//todo yield to other operations
+	//return here from memCopyCompletCallBack callback
+}
+
+void memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength){
+	volatile static uint32_t setVal = 0;
+	setVal = value;
+	//todo disable source increment if it is enabled
+	HAL_DMA_Start_IT(&memcopyDMA, (uint32_t)&setVal, (uint32_t)DstAddress, DataLength);
+	//todo yield to other operations
+	//return here from memCopyCompletCallBack callback
+}
+
+void memCopyCompletCallBack(DMA_HandleTypeDef *_hdma){
+
+}
+
+void clearVisibleArea(Color * lineBuffPart){
 	//uses 32 bit mode to clear faster
-	//todo replace with DMA mem clear
-	uint32_t * begin = (void*)lineBuffPart;
-
-	#pragma GCC diagnostic push
-	#pragma GCC diagnostic ignored "-Wtautological-compare"
-	_Static_assert(&lineBuffPart[horiAria] == lineBuffPart + horiAria, "Line buffer arithmetic broken");
-	_Static_assert(horiAria%4==0, "Line buffer not a multiple of 4");
-	#pragma GCC diagnostic pop
-
-	uint32_t * end = (void*)&lineBuffPart[horiAria];
-	//clear main Visible aria
-	while(begin != end){
-		*begin = 0;
-		++begin;
-	}
-
+	memSet(0, (uint32_t*)lineBuffPart, horiRes);
 }
 
 void setVerticalSync(Color * lineBuffPart){
 	//uses 32 bit accesses to clear faster
-	//todo replace with DMA mem clear
-	uint32_t * begin = (void*)lineBuffPart;
-	uint32_t * end = (void*)&lineBuffPart[horiWhole];
 
 	//set VerticalSync everywhere
-	while(begin != end){
-		*begin = 0x80808080;
-		++begin;
-	}
-
-	begin = (void*)&lineBuffPart[horiAria+horiFront];
-	end = (void*)&lineBuffPart[horiAria+horiFront+horiSync];
+	memSet(0x80808080, (uint32_t*)lineBuffPart, horiWhole);
 	//set vertical and Horizontal sync in overlap
-	while(begin != end){
-		*begin = 0xC0C0C0C0;
-		++begin;
-	}
+	memSet(0xC0C0C0C0, (uint32_t*)&lineBuffPart[horiRes+horiFront], horiSync);
 }
 
 void setHorizontalSync(Color * lineBuffPart){
 	//uses 32 bit accesses to clear faster
-	//todo replace with DMA mem clear
-	uint32_t * begin = (void*)lineBuffPart;
-	uint32_t * end = (void*)&lineBuffPart[horiWhole];
 
 	//clear VerticalSync everywhere / clear entire buffer
-	while(begin != end){
-		*begin = 0x0;
-	}
-	begin = (void*)&lineBuffPart[horiAria+horiFront];
-	end = (void*)&lineBuffPart[horiAria+horiFront+horiSync];
+	memSet(0, (uint32_t*)lineBuffPart, horiWhole);
 	//set Horizontal sync
-	while(begin != end){
-		*begin = 0x40404040;
-		++begin;
-	}
+	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiRes+horiFront], horiSync);
 }
 
-void upscaleBackground(Color * lineBuffPart, const int lineCount){
-	//uses 32 bit accesses to upscale faster
-	//todo replace with a series of byte to 8 byte mem copies using dma
-	//todo remove?
-	Color * cBegin = &backgroundBuff[horiRes*lineCount];
-	Color * cEnd = cBegin + vertRes;
-	uint32_t * lBegin = (void*)lineBuffPart;
-	uint32_t * lEnd = (void*)&lineBuffPart[horiAria];
-	while(cBegin != cEnd){
-		uint32_t colorExtended = cBegin->value;
-		colorExtended = colorExtended << 8 | colorExtended;
-		colorExtended = colorExtended << 16 | colorExtended;
-		* lBegin = colorExtended;
-		++lBegin;
-		* lBegin = colorExtended;
-		++lBegin;
-		++cBegin;
-	}
-	if(lBegin != lEnd){
-		//assert(lBegin == lEnd);//todo implement/find run time error reporting
-	}
+void __weak renderLine(Color * lineBuffPart, const int lineCount){
+	//both buffers are 32 bit aligned
+
+	//copy the current line of the screen buffer in to the line buffer
+	memCopy((uint32_t*)&screenBuff[horiRes*lineCount], (uint32_t *)lineBuffPart, horiRes);
 }
 
-void vgaSendBuffer(Color * lineBuffPart){
-	//send the currently active buffer to GPIOC output register to 8 byte aligned pins 0-7
-	//todo priority replace with memory to peripheral dma transfer
-	Color * begin = lineBuffPart;
-	Color * end = &lineBuffPart[horiWhole];
-	while(begin != end){
-		*((volatile Color*) &(GPIOC->ODR)) = *begin;
-		++begin;
-	}
+void copyLastLine(Color * activeBuffer, const Color * oldBuffer){
+	//both buffers are 32 bit aligned
+	memCopy((uint32_t*)oldBuffer, (uint32_t *)activeBuffer, horiRes);
 }
 
+void prepareLine(Color * activeBuffer, const Color * oldBuffer){
+	static int lineCount = vertArea + vertFront + vertSync;//start right after a vertical sync
+	static int lineUpscale = 0;//copy old buffer if non zero
 
-
-void prepareLine(Color * activeBuffer){
-	static int lineCount = vertAria + vertFront + vertSync;//start right after a vertical sync
 		if((lineCount&0b1) == 0){//todo there is a odd number of lines in a frame get active buffer from DMA status or boolean toggle
 		activeBuffer += horiWhole;
 	}
-	if(lineCount < vertAria){//render color by upscaling colorBuff and decoding charBuf
-		if(vgaCharMode == 1){// render characters in monochrome
-
-		}else if(vgaCharMode == 2){//render characters in color
-
-		}else{// color mode only using the background
-			//todo make it so that you can use swap between the 3 buffers
-			upscaleBackground(activeBuffer, lineCount);
+	if(lineCount < vertArea){//render line by copying from screenBuff
+		if(vgaUpscale == 1){//we are not upscaling and can't reuse old buffers
+			renderLine(activeBuffer, lineCount);
+		}else{//we are upscaling and can save recourses by copying last buffer
+			if(lineUpscale == 0){//first pass render line
+				renderLine(activeBuffer, lineCount);
+			}else if(lineUpscale == 1){
+				//would be faster if we could use a fifo queue of dma transfers instead of a circular buffer
+				copyLastLine(activeBuffer, oldBuffer);
+			}
+			if(++lineUpscale == vgaUpscale){
+				lineUpscale = 0;
+			}
 		}
 	}
 
-	else if(lineCount == vertAria){//clear leftover data in buffer 1
-		clearVisibleAria(activeBuffer);
-	}else if(lineCount == vertAria + 1){//clear leftover data in buffer 2
-		clearVisibleAria(activeBuffer);
+	else if(lineCount == vertArea){//clear leftover data in buffer 1
+		clearVisibleArea(activeBuffer);
+	}else if(lineCount == vertArea + 1){//clear leftover data in buffer 2
+		clearVisibleArea(activeBuffer);
 	}
 
-	else if(lineCount == vertAria + vertFront){//set Vertical Sync in buffer 1
+	else if(lineCount == vertArea + vertFront){//set Vertical Sync in buffer 1
 		setVerticalSync(activeBuffer);
-	}else if(lineCount == vertAria + vertFront + 1){//set Vertical Sync in buffer 2
+	}else if(lineCount == vertArea + vertFront + 1){//set Vertical Sync in buffer 2
 		setVerticalSync(activeBuffer);
 	}
 
-	else if(lineCount == vertAria + vertFront + vertSync){//set Horizontal Sync in buffer 1
+	else if(lineCount == vertArea + vertFront + vertSync){//set Horizontal Sync in buffer 1
 		setHorizontalSync(activeBuffer);
-	}else if(lineCount == vertAria + vertFront + vertSync + 1){//set Horizontal Sync in buffer 2
+	}else if(lineCount == vertArea + vertFront + vertSync + 1){//set Horizontal Sync in buffer 2
 		setHorizontalSync(activeBuffer);
 	}
 
 	else if(lineCount == vertWhole){// set line count back to the start
 		lineCount = -1;
+		lineUpscale = 0;
 	}
 	++lineCount;
 }
 
+void vgaHalfCallBack(DMA_HandleTypeDef *_hdma){
+	prepareLine(lineBuff, &lineBuff[horiWhole]);
+}
+
+void vgaFullCallBack(DMA_HandleTypeDef *_hdma){
+	prepareLine(&lineBuff[horiWhole], lineBuff);
+}
 
 void vgaLoop(){
-	while(1){
-		prepareLine(lineBuff);
-		vgaSendBuffer(lineBuff);
-		prepareLine(&lineBuff[horiWhole]);
-		vgaSendBuffer(&lineBuff[horiWhole]);
+
+	/* DMA controller clock enable */
+	__HAL_RCC_DMA2_CLK_ENABLE();
+	__HAL_RCC_DMA1_CLK_ENABLE();
+
+	/* DMA interrupt init */
+	/* DMA1_Stream5_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(DMA1_Stream5_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA1_Stream5_IRQn);
+	/* DMA2_Stream5_IRQn interrupt configuration */
+	HAL_NVIC_SetPriority(DMA2_Stream5_IRQn, 0, 0);
+	HAL_NVIC_EnableIRQ(DMA2_Stream5_IRQn);
+
+	vgaPixelTimer.Instance = TIM1;
+	vgaPixelTimer.Init.Prescaler = 0;
+	vgaPixelTimer.Init.CounterMode = TIM_COUNTERMODE_UP;
+	vgaPixelTimer.Init.Period = 65535;
+	vgaPixelTimer.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
+	vgaPixelTimer.Init.RepetitionCounter = 0;
+	vgaPixelTimer.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
+	if (HAL_TIM_Base_Init(&vgaPixelTimer) != HAL_OK)
+	{
+		Error_Handler();
 	}
+
+
+	/* USART2 DMA Init */
+	/* USART2_RX Init */
+	memcopyDMA.Instance = DMA2_Stream5;
+	memcopyDMA.Init.Channel = DMA_CHANNEL_4;
+	memcopyDMA.Init.Direction = DMA_MEMORY_TO_MEMORY;
+	memcopyDMA.Init.PeriphInc = DMA_PINC_DISABLE;
+	memcopyDMA.Init.MemInc = DMA_MINC_ENABLE;
+	memcopyDMA.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
+	memcopyDMA.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+	memcopyDMA.Init.Mode = DMA_NORMAL;
+	memcopyDMA.Init.Priority = DMA_PRIORITY_LOW;
+	memcopyDMA.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
+	if (HAL_DMA_Init(&memcopyDMA) != HAL_OK)
+	{
+		Error_Handler();
+	}
+
+	if(vgaPixelTimer.Instance==TIM1)
+	{
+		/* USER CODE BEGIN TIM1_MspInit 0 */
+
+		/* USER CODE END TIM1_MspInit 0 */
+		/* Peripheral clock enable */
+		__HAL_RCC_TIM1_CLK_ENABLE();
+
+		/* TIM1 DMA Init */
+		/* TIM1_UP Init */
+		vgaCircularDMA.Instance = DMA1_Stream5;
+		vgaCircularDMA.Init.Channel = DMA_CHANNEL_6;
+		vgaCircularDMA.Init.Direction = DMA_MEMORY_TO_PERIPH;
+		vgaCircularDMA.Init.PeriphInc = DMA_PINC_DISABLE;
+		vgaCircularDMA.Init.MemInc = DMA_MINC_ENABLE;
+		vgaCircularDMA.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
+		vgaCircularDMA.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+		vgaCircularDMA.Init.Mode = DMA_CIRCULAR;
+		vgaCircularDMA.Init.Priority = DMA_PRIORITY_HIGH;
+		vgaCircularDMA.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
+		vgaCircularDMA.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_1QUARTERFULL;
+		vgaCircularDMA.Init.MemBurst = DMA_MBURST_SINGLE;
+		vgaCircularDMA.Init.PeriphBurst = DMA_PBURST_SINGLE;
+		if (HAL_DMA_Init(&vgaCircularDMA) != HAL_OK)
+		{
+			Error_Handler();
+		}
+
+		__HAL_LINKDMA(&vgaPixelTimer,hdma[TIM_DMA_ID_UPDATE],vgaCircularDMA);
+
+		/* USER CODE BEGIN TIM1_MspInit 1 */
+
+		/* USER CODE END TIM1_MspInit 1 */
+	}
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_CPLT_CB_ID, memCopyCompletCallBack);
+	HAL_DMA_RegisterCallback(&vgaCircularDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaHalfCallBack);
+	HAL_DMA_RegisterCallback(&vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
+
+	//HAL_DMA_Start_IT(memcopyDMA, SrcAddress, DstAddress, DataLength);
+
+	//prepare the buffer with the first two lines
+	prepareLine(lineBuff, &lineBuff[horiWhole]);
+	prepareLine(&lineBuff[horiWhole], lineBuff);
+	//start the circular buffer dma transfer aka vga main loop
+	HAL_DMA_Start_IT(&vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
 }

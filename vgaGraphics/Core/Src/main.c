@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "vga.h"
+#include "codepage-437-bmp.h"
 /* USER CODE END Includes */
 
 /* Private typedef -----------------------------------------------------------*/
@@ -98,13 +99,10 @@ int main(void)
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
   lineBuff[20].value = 2;
+  lineBuff[21].value = codepage_437_monocrome_inverted_map[lineBuff[21].value];
   setRGB(&lineBuff[20], 2, 3, 1);
   screenBuff[35].value = 'S';
-  //*
-  backgroundBuff[30].value = 'B';
-  forgroundBuff[25].value = 'F';
-  charBuff[20].value = 'A';
-  //*/
+
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -178,6 +176,8 @@ static void MX_TIM1_Init(void)
 
   TIM_ClockConfigTypeDef sClockSourceConfig = {0};
   TIM_MasterConfigTypeDef sMasterConfig = {0};
+  TIM_OC_InitTypeDef sConfigOC = {0};
+  TIM_BreakDeadTimeConfigTypeDef sBreakDeadTimeConfig = {0};
 
   /* USER CODE BEGIN TIM1_Init 1 */
 
@@ -198,15 +198,42 @@ static void MX_TIM1_Init(void)
   {
     Error_Handler();
   }
+  if (HAL_TIM_OC_Init(&htim1) != HAL_OK)
+  {
+    Error_Handler();
+  }
   sMasterConfig.MasterOutputTrigger = TIM_TRGO_RESET;
   sMasterConfig.MasterSlaveMode = TIM_MASTERSLAVEMODE_DISABLE;
   if (HAL_TIMEx_MasterConfigSynchronization(&htim1, &sMasterConfig) != HAL_OK)
   {
     Error_Handler();
   }
+  sConfigOC.OCMode = TIM_OCMODE_FORCED_ACTIVE;
+  sConfigOC.Pulse = 0;
+  sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
+  sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
+  sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
+  sConfigOC.OCIdleState = TIM_OCIDLESTATE_RESET;
+  sConfigOC.OCNIdleState = TIM_OCNIDLESTATE_RESET;
+  if (HAL_TIM_OC_ConfigChannel(&htim1, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
+  {
+    Error_Handler();
+  }
+  sBreakDeadTimeConfig.OffStateRunMode = TIM_OSSR_DISABLE;
+  sBreakDeadTimeConfig.OffStateIDLEMode = TIM_OSSI_DISABLE;
+  sBreakDeadTimeConfig.LockLevel = TIM_LOCKLEVEL_OFF;
+  sBreakDeadTimeConfig.DeadTime = 0;
+  sBreakDeadTimeConfig.BreakState = TIM_BREAK_DISABLE;
+  sBreakDeadTimeConfig.BreakPolarity = TIM_BREAKPOLARITY_HIGH;
+  sBreakDeadTimeConfig.AutomaticOutput = TIM_AUTOMATICOUTPUT_DISABLE;
+  if (HAL_TIMEx_ConfigBreakDeadTime(&htim1, &sBreakDeadTimeConfig) != HAL_OK)
+  {
+    Error_Handler();
+  }
   /* USER CODE BEGIN TIM1_Init 2 */
 
   /* USER CODE END TIM1_Init 2 */
+  HAL_TIM_MspPostInit(&htim1);
 
 }
 
@@ -287,17 +314,10 @@ static void MX_GPIO_Init(void)
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   HAL_GPIO_Init(B1_GPIO_Port, &GPIO_InitStruct);
 
-  /*Configure GPIO pin : VGAdac0_Pin */
-  GPIO_InitStruct.Pin = VGAdac0_Pin;
-  GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
-  GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
-  HAL_GPIO_Init(VGAdac0_GPIO_Port, &GPIO_InitStruct);
-
-  /*Configure GPIO pins : VGAdac1_Pin VGAdac2_Pin VGAdac3_Pin VGAdac4_Pin
-                           VGAdac5_Pin VGAdac6_Pin VGAdac7_Pin */
-  GPIO_InitStruct.Pin = VGAdac1_Pin|VGAdac2_Pin|VGAdac3_Pin|VGAdac4_Pin
-                          |VGAdac5_Pin|VGAdac6_Pin|VGAdac7_Pin;
+  /*Configure GPIO pins : VGAdac0_Pin VGAdac1_Pin VGAdac2_Pin VGAdac3_Pin
+                           VGAdac4_Pin VGAdac5_Pin VGAdac6_Pin VGAdac7_Pin */
+  GPIO_InitStruct.Pin = VGAdac0_Pin|VGAdac1_Pin|VGAdac2_Pin|VGAdac3_Pin
+                          |VGAdac4_Pin|VGAdac5_Pin|VGAdac6_Pin|VGAdac7_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
   GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
