@@ -14,10 +14,14 @@ typedef struct {
 	char value;
 }Color;
 
-enum { horiRes = 80};
-enum { vertRes = 50};
+enum { vgaDownscale = 2 };
+enum { horiRes = 640/vgaDownscale};
+enum { vertRes = 400/vgaDownscale};
+enum { horiChar = horiRes/8};
+enum { vertChar = horiRes/8};
 
 extern Color lineBuff [];//double  buffered
+extern Color screenBuff [];
 extern Color backgroundBuff [];//rows*columns
 extern Color forgroundBuff [];//rows*columns
 extern Color charBuff [];//rows*columns

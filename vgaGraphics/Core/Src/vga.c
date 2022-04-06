@@ -18,17 +18,17 @@ Pixel freq.	25.175 MHz
 
 Horizontal timing (line)
 Polarity of horizontal sync pulse is negative.
-Scanline part	Pixels	/8	Time [µs]
-Visible area	640		80	25.422045680238
-Front porch		16		2	0.63555114200596
-Sync pulse		96		12	3.8133068520357
-Back porch		48		6	1.9066534260179
-Whole line		800		100	31.777557100298
+Scanline part	Pixels	/4	Time [µs]
+Visible area	640		160	25.422045680238
+Front porch		16		4	0.63555114200596
+Sync pulse		96		24	3.8133068520357
+Back porch		48		12	1.9066534260179
+Whole line		800		200	31.777557100298
 
 Vertical timing (frame)
 Polarity of vertical sync pulse is positive.
-Frame part		Lines	/8	Time [ms]
-Visible area	400		50	12.711022840119
+Frame part		Lines	/4	Time [ms]
+Visible area	400		100	12.711022840119
 Front porch		12			0.38133068520357
 Sync pulse		2			0.063555114200596
 Back porch		35			1.1122144985104
@@ -36,16 +36,11 @@ Whole frame		449			14.268123138034
  *
  */
 
-
-//defined in header for external visibility
-//enum { horiRes = 80};
-//enum { vertRes = 50};
-
-enum { horiAria = 640};
-enum { horiFront = 16};
-enum { horiSync = 96};
-enum { horiBack = 48};
-enum { horiWhole = 800};
+enum { horiAria = 640/vgaDownscale};
+enum { horiFront = 16/vgaDownscale};
+enum { horiSync = 96/vgaDownscale};
+enum { horiBack = 48/vgaDownscale};
+enum { horiWhole = 800/vgaDownscale};
 
 enum { vertAria = 400};
 enum { vertFront = 12};
@@ -53,10 +48,12 @@ enum { vertSync = 2};
 enum { vertBack = 35};
 enum { vertWhole = 449};
 
+
 Color lineBuff [horiWhole*2] = {0};//double  buffered
-Color backgroundBuff [horiRes*vertRes] = {0};//rows*columns
-Color forgroundBuff [horiRes*vertRes] = {0};//rows*columns
-Color charBuff [horiRes*vertRes] = {0};//rows*columns
+Color screenBuff[horiRes*vertRes] = {0};//rows*columns
+Color backgroundBuff [horiChar*vertChar] = {0};//rows*columns
+Color forgroundBuff [horiChar*vertChar] = {0};//rows*columns
+Color charBuff [horiChar*vertChar] = {0};//rows*columns
 
 int vgaCharMode = 0;
 
@@ -142,6 +139,7 @@ void setHorizontalSync(Color * lineBuffPart){
 void upscaleBackground(Color * lineBuffPart, const int lineCount){
 	//uses 32 bit accesses to upscale faster
 	//todo replace with a series of byte to 8 byte mem copies using dma
+	//todo remove?
 	Color * cBegin = &backgroundBuff[horiRes*lineCount];
 	Color * cEnd = cBegin + vertRes;
 	uint32_t * lBegin = (void*)lineBuffPart;
