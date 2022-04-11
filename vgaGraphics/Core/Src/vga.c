@@ -7,6 +7,8 @@
 
 
 #include "vga.h"
+#include "main.h"
+#include <stdio.h>
 //#include "codepage-437-bmp.h"
 
 /*
@@ -95,59 +97,147 @@ void setVblank(Color * c){
 	c->value = 0b1000000;
 }
 
-void memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength){
-	//todo enable source increment if it is disabled
-	HAL_DMA_Start_IT(&memcopyDMA, (uint32_t)SrcAddress, (uint32_t)DstAddress, DataLength);
+/**
+ * @brief copies 4byte aligned data
+ *
+ * @param SrcAddress copies from source address incrementing
+ *
+ * @param DstAddress copies to destination address incrementing
+ *
+ * @param DataLength number of unit32_t to be copied
+ */
+HAL_StatusTypeDef memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength){
+	if (HAL_DMA_Init(&memcopyDMA) != HAL_OK) {
+		Error_Handler();
+	}
+	SET_BIT(vgaCircularDMA.Instance->CR, DMA_MINC_ENABLE);
+	return HAL_DMA_Start(&memcopyDMA, (uint32_t)SrcAddress, (uint32_t)DstAddress, DataLength);
+	while(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100) != HAL_OK);
 	//todo yield to other operations
 	//return here from memCopyCompletCallBack callback
+	return HAL_OK;
 }
 
-void memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength){
+/**
+ * @brief sets 4byte aligned data
+ *
+ * @param value value to be written
+ *
+ * @param DstAddress destination address incrementing
+ *
+ * @param DataLength number of unit32_t to be written
+ */
+HAL_StatusTypeDef memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength){
 	volatile static uint32_t setVal = 0;
 	setVal = value;
-	//todo disable source increment if it is enabled
-	HAL_DMA_Start_IT(&memcopyDMA, (uint32_t)&setVal, (uint32_t)DstAddress, DataLength);
+	if (HAL_DMA_Init(&memcopyDMA) != HAL_OK) {
+		Error_Handler();
+	}
+	CLEAR_BIT(vgaCircularDMA.Instance->CR, DMA_MINC_ENABLE);
+	HAL_DMA_Start(&memcopyDMA, (uint32_t)&setVal, (uint32_t)DstAddress, DataLength);
+	while(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100) != HAL_OK);
 	//todo yield to other operations
 	//return here from memCopyCompletCallBack callback
+	return HAL_OK;
 }
 
 void memCopyCompletCallBack(DMA_HandleTypeDef *_hdma){
 
 }
 
+UART_HandleTypeDef * huartE;
+//HAL_DMA_XFER_CPLT_CB_ID         = 0x00U,  /*!< Full transfer     */
+void vga_DMA_XFER_CPLT_CB_ID(){
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "Full transfer\r\n");
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+//HAL_DMA_XFER_HALFCPLT_CB_ID     = 0x01U,  /*!< Half Transfer     */
+void vga_DMA_XFER_HALFCPLT_CB_ID(){
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "Half Transfer\r\n");
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+//HAL_DMA_XFER_M1CPLT_CB_ID       = 0x02U,  /*!< M1 Full Transfer  */
+void vga_DMA_XFER_M1CPLT_CB_ID(){
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "M1 Full Transfer\r\n");
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+//HAL_DMA_XFER_M1HALFCPLT_CB_ID   = 0x03U,  /*!< M1 Half Transfer  */
+void vga_DMA_XFER_M1HALFCPLT_CB_ID(){
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "M1 Half Transfer\r\n");
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+//HAL_DMA_XFER_ERROR_CB_ID        = 0x04U,  /*!< Error             */
+void vga_DMA_XFER_ERROR_CB_ID(){
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "DMA Error\r\n");
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+//HAL_DMA_XFER_ABORT_CB_ID        = 0x05U,  /*!< Abort             */
+void vga_DMA_XFER_ABORT_CB_ID(){
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "DMA Abort\r\n");
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+//HAL_DMA_XFER_ALL_CB_ID          = 0x06U   /*!< All               */
+void vga_DMA_XFER_ALL_CB_ID(){
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "Full transfer\r\n");
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+
+
+
+void registerDebugInterupts(UART_HandleTypeDef * t_huartE){
+	huartE = t_huartE;
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_CPLT_CB_ID);
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vga_DMA_XFER_HALFCPLT_CB_ID);
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_M1CPLT_CB_ID, vga_DMA_XFER_M1CPLT_CB_ID);
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_M1HALFCPLT_CB_ID, vga_DMA_XFER_M1HALFCPLT_CB_ID);
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_ERROR_CB_ID, vga_DMA_XFER_ERROR_CB_ID);
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_ABORT_CB_ID);
+	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_ALL_CB_ID, vga_DMA_XFER_ALL_CB_ID);
+}
+
 void clearVisibleArea(Color * lineBuffPart){
 	//uses 32 bit mode to clear faster
-	memSet(0, (uint32_t*)lineBuffPart, horiRes);
+	memSet(0, (uint32_t*)lineBuffPart, horiRes/4);
 }
 
 void setVerticalSync(Color * lineBuffPart){
 	//uses 32 bit accesses to clear faster
 
 	//set VerticalSync everywhere
-	memSet(0x80808080, (uint32_t*)lineBuffPart, horiWhole);
+	memSet(0x80808080, (uint32_t*)lineBuffPart, horiWhole/4);
 	//set vertical and Horizontal sync in overlap
-	memSet(0xC0C0C0C0, (uint32_t*)&lineBuffPart[horiRes+horiFront], horiSync);
+	memSet(0xC0C0C0C0, (uint32_t*)&lineBuffPart[horiRes+horiFront], horiSync/4);
 }
 
 void setHorizontalSync(Color * lineBuffPart){
 	//uses 32 bit accesses to clear faster
 
 	//clear VerticalSync everywhere / clear entire buffer
-	memSet(0, (uint32_t*)lineBuffPart, horiWhole);
+	memSet(0, (uint32_t*)lineBuffPart, horiWhole/4);
 	//set Horizontal sync
-	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiRes+horiFront], horiSync);
+	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiRes+horiFront], horiSync/4);
 }
 
 void __weak renderLine(Color * lineBuffPart, const int lineCount){
 	//both buffers are 32 bit aligned
 
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "Rendering line %i\r\n", lineCount);
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
 	//copy the current line of the screen buffer in to the line buffer
-	memCopy((uint32_t*)&screenBuff[horiRes*lineCount], (uint32_t *)lineBuffPart, horiRes);
+	memCopy((uint32_t*)&screenBuff[horiRes*lineCount], (uint32_t *)lineBuffPart, horiRes/4);
 }
 
 void copyLastLine(Color * activeBuffer, const Color * oldBuffer){
 	//both buffers are 32 bit aligned
-	memCopy((uint32_t*)oldBuffer, (uint32_t *)activeBuffer, horiRes);
+	memCopy((uint32_t*)oldBuffer, (uint32_t *)activeBuffer, horiRes/4);
 }
 
 void prepareLine(Color * activeBuffer, const Color * oldBuffer){
@@ -206,7 +296,9 @@ void vgaFullCallBack(DMA_HandleTypeDef *_hdma){
 	prepareLine(&lineBuff[horiWhole], lineBuff);
 }
 
-void vgaLoop(){
+
+
+void vgaSetup(){
 
 	/* DMA controller clock enable */
 	__HAL_RCC_DMA2_CLK_ENABLE();
@@ -285,6 +377,9 @@ void vgaLoop(){
 		/* USER CODE END TIM1_MspInit 1 */
 	}
 	HAL_DMA_RegisterCallback(&memcopyDMA, HAL_DMA_XFER_CPLT_CB_ID, memCopyCompletCallBack);
+}
+
+void vgaStart(){
 	HAL_DMA_RegisterCallback(&vgaCircularDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaHalfCallBack);
 	HAL_DMA_RegisterCallback(&vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
 
@@ -295,4 +390,8 @@ void vgaLoop(){
 	prepareLine(&lineBuff[horiWhole], lineBuff);
 	//start the circular buffer dma transfer aka vga main loop
 	HAL_DMA_Start_IT(&vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
+}
+
+void vgaStop(){
+
 }

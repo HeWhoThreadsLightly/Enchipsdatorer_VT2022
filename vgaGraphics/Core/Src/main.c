@@ -22,6 +22,7 @@
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
 #include "vga.h"
+#include <stdio.h>
 #include "codepage-437-bmp.h"
 /* USER CODE END Includes */
 
@@ -63,6 +64,61 @@ static void MX_TIM1_Init(void);
 /* Private user code ---------------------------------------------------------*/
 /* USER CODE BEGIN 0 */
 
+char str[81] = { '\0' };
+uint16_t str_len = 0;
+
+void dumpLine(){
+
+	for(int i = 0; i < 40; i++){
+		int tmp = screenBuff[i].value;
+		str_len = sprintf(str, "%02x ", tmp);
+		HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+	}
+	str_len = sprintf(str, "\r\n");
+	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+}
+
+void printStatus(HAL_StatusTypeDef status){
+	/*
+	typedef enum
+	{
+	  HAL_OK       = 0x00U,
+	  HAL_ERROR    = 0x01U,
+	  HAL_BUSY     = 0x02U,
+	  HAL_TIMEOUT  = 0x03U
+	} HAL_StatusTypeDef;//*/
+	switch(status){
+	case HAL_OK:str_len = sprintf(str, "HAL_OK\r\n");break;
+	case HAL_ERROR:str_len = sprintf(str, "HAL_ERROR\r\n");break;
+	case HAL_BUSY:str_len = sprintf(str, "HAL_BUSY\r\n");break;
+	case HAL_TIMEOUT:str_len = sprintf(str, "HAL_TIMEOUT\r\n");break;
+	default:str_len = sprintf(str, "HAL_Unknown\r\n");break;
+	}
+	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+
+}
+
+int printState(HAL_DMA_StateTypeDef state){
+  //HAL_DMA_STATE_RESET             = 0x00U,  /*!< DMA not yet initialized or disabled */
+  //HAL_DMA_STATE_READY             = 0x01U,  /*!< DMA initialized and ready for use   */
+  //HAL_DMA_STATE_BUSY              = 0x02U,  /*!< DMA process is ongoing              */
+  //HAL_DMA_STATE_TIMEOUT           = 0x03U,  /*!< DMA timeout state                   */
+  //HAL_DMA_STATE_ERROR             = 0x04U,  /*!< DMA error state                     */
+  //HAL_DMA_STATE_ABORT             = 0x05U,  /*!< DMA Abort state                     */
+//}HAL_DMA_StateTypeDef;
+	switch(state){
+	case HAL_DMA_STATE_RESET:str_len = sprintf(str, "DMA not yet initialized or disabled\r\n");break;
+	case HAL_DMA_STATE_READY:str_len = sprintf(str, "DMA initialized and ready for use\r\n");break;
+	case HAL_DMA_STATE_BUSY:str_len = sprintf(str, "DMA process is ongoing\r\n");break;
+	case HAL_DMA_STATE_TIMEOUT:str_len = sprintf(str, "DMA timeout state\r\n");break;
+	case HAL_DMA_STATE_ERROR:str_len = sprintf(str, "DMA error state\r\n");break;
+	case HAL_DMA_STATE_ABORT:str_len = sprintf(str, "DMA Abort state\r\n");break;
+	default:str_len = sprintf(str, "DMA_Unknown\r\n");break;
+
+	}
+	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+	return state != HAL_DMA_STATE_READY;
+}
 
 /* USER CODE END 0 */
 
@@ -98,15 +154,61 @@ int main(void)
   MX_DMA_Init();
   MX_TIM1_Init();
   /* USER CODE BEGIN 2 */
-  lineBuff[20].value = 2;
-  lineBuff[21].value = codepage_437_monocrome_inverted_map[lineBuff[21].value];
-  setRGB(&lineBuff[20], 2, 3, 1);
-  screenBuff[35].value = 'S';
 
+  char str[81] = { '\0' };
+  uint16_t str_len = 0;
+  str_len = sprintf(str, "Starting up!\r\n");
+  HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+
+  vgaSetup();
+  registerDebugInterupts(&huart2);
+
+  for(int i = 0; i < vertRes; i++){
+	  for(int j = 0; j < horiRes; j++){
+		  screenBuff[i*vertRes + j].value = j & 0b111111;
+	  }
+  }
+
+  dumpLine();
+  printState(HAL_DMA_GetState(&memcopyDMA));
+
+  str_len = sprintf(str, "\r\n\r\n");
+  HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+
+  printStatus(memSet(0, &screenBuff[0], 2));//testingMemset
+  printState(HAL_DMA_GetState(&memcopyDMA));
+  dumpLine();
+  while(printState(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
+
+  str_len = sprintf(str, "\r\n\r\n");
+  HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+
+  if (HAL_DMA_Init(&memcopyDMA) != HAL_OK) {
+	  Error_Handler();
+  }
+  printStatus(memCopy(&screenBuff[8], &screenBuff[0], 2));//testingMemcopy
+  printState(HAL_DMA_GetState(&memcopyDMA));
+  dumpLine();
+  while(printState(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
+
+  str_len = sprintf(str, "\r\n\r\n");
+  HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+
+  if (HAL_DMA_Init(&memcopyDMA) != HAL_OK) {
+	  Error_Handler();
+  }
+  printStatus(memSet(0xff, &screenBuff[0], 2));//testingMemset
+  printState(HAL_DMA_GetState(&memcopyDMA));
+  dumpLine();
+  while(printState(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
+
+  str_len = sprintf(str, "\r\n\r\n");
+  HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+  vgaStart();
   while (1)
   {
     /* USER CODE END WHILE */

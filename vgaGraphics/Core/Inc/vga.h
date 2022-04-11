@@ -32,11 +32,22 @@ void setRGB(Color * c, char r, char g, char b);
 void setHblank(Color * c);
 void setVblank(Color * c);
 
+
+extern TIM_HandleTypeDef vgaPixelTimer;
+extern DMA_HandleTypeDef vgaCircularDMA;
+extern DMA_HandleTypeDef memcopyDMA;
+
+HAL_StatusTypeDef memCopy();
+HAL_StatusTypeDef memSet();
+void registerDebugInterupts(UART_HandleTypeDef * huart2);
+
 void clearVisibleAria(Color * lineBuffPart);
 void setVerticalSync(Color * lineBuffPart);
 void setHorizontalSync(Color * lineBuffPart);
 
-
+void vgaSetup();
+void vgaStart();
+void vgaStop();
 
 
 #endif /* INC_VGA_H_ */
