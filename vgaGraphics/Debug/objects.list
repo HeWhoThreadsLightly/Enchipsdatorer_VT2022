@@ -1,3 +1,5 @@
+"./Core/Src/codepage-437-bmp.o"
+"./Core/Src/graphicsLib.o"
 "./Core/Src/main.o"
 "./Core/Src/stm32f4xx_hal_msp.o"
 "./Core/Src/stm32f4xx_it.o"

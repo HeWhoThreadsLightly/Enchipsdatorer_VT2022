@@ -78,7 +78,7 @@ void dumpLine(){
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
 }
 
-void printStatus(HAL_StatusTypeDef status){
+int printStatus(HAL_StatusTypeDef status){
 	/*
 	typedef enum
 	{
@@ -95,6 +95,7 @@ void printStatus(HAL_StatusTypeDef status){
 	default:str_len = sprintf(str, "HAL_Unknown\r\n");break;
 	}
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+	return status != HAL_OK;
 
 }
 
@@ -178,7 +179,7 @@ int main(void)
   printStatus(memSet(0, &screenBuff[0], 2));//testingMemset
   printState(HAL_DMA_GetState(&memcopyDMA));
   dumpLine();
-  while(printState(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
+  while(printStatus(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
 
   str_len = sprintf(str, "\r\n\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
@@ -189,7 +190,7 @@ int main(void)
   printStatus(memCopy(&screenBuff[8], &screenBuff[0], 2));//testingMemcopy
   printState(HAL_DMA_GetState(&memcopyDMA));
   dumpLine();
-  while(printState(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
+  while(printStatus(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
 
   str_len = sprintf(str, "\r\n\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
@@ -200,7 +201,7 @@ int main(void)
   printStatus(memSet(0xff, &screenBuff[0], 2));//testingMemset
   printState(HAL_DMA_GetState(&memcopyDMA));
   dumpLine();
-  while(printState(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
+  while(printStatus(HAL_DMA_PollForTransfer(&memcopyDMA, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
 
   str_len = sprintf(str, "\r\n\r\n");
   HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
