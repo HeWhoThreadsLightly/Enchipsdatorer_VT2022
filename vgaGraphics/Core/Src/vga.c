@@ -585,6 +585,14 @@ void vgaSetup(){
 
 		/* USER CODE END TIM1_MspInit 1 */
 	}
+
+	/*
+	HAL_TIMEx_OCN_Start_DMA(htim, Channel, pData, Length);
+	HAL_TIM_Encoder_Start(htim, Channel);
+	HAL_TIM_DMABurst_WriteStart(htim, BurstBaseAddress, BurstRequestSrc, BurstBuffer, BurstLength);
+	HAL_TIM_OC_Start_DMA(htim, Channel, pData, Length);
+	HAL_TIM_DMABurst_MultiWriteStart(htim, BurstBaseAddress, BurstRequestSrc, BurstBuffer, BurstLength, DataLength);
+	//*/
 }
 
 void vgaStart(){

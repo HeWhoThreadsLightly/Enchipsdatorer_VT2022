@@ -1,3 +1,4 @@
 ../Core/Src/graphicsLib.c:12:5:getBitN	16	static
 ../Core/Src/graphicsLib.c:16:7:combineColors	24	static
 ../Core/Src/graphicsLib.c:31:6:renderChar	56	static
+../Core/Src/graphicsLib.c:58:6:renderString	32	static

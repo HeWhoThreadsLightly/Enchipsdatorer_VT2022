@@ -37,13 +37,13 @@ Idx Name          Size      VMA       LMA       File off  Algn
                   CONTENTS, READONLY, DEBUGGING, OCTETS
  16 .debug_macro  0000291f  00000000  00000000  00032740  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 17 .debug_line   0000ec21  00000000  00000000  0003505f  2**0
+ 17 .debug_line   0000eb37  00000000  00000000  0003505f  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 18 .debug_str    0008ddb5  00000000  00000000  00043c80  2**0
+ 18 .debug_str    0008ddfb  00000000  00000000  00043b96  2**0
                   CONTENTS, READONLY, DEBUGGING, OCTETS
- 19 .comment      00000050  00000000  00000000  000d1a35  2**0
+ 19 .comment      00000050  00000000  00000000  000d1991  2**0
                   CONTENTS, READONLY
- 20 .debug_frame  00003c54  00000000  00000000  000d1a88  2**2
+ 20 .debug_frame  00003c54  00000000  00000000  000d19e4  2**2
                   CONTENTS, READONLY, DEBUGGING, OCTETS
 
 Disassembly of section .text:
@@ -3626,11 +3626,11 @@ void vgaSetup(){
  800191a:	4b08      	ldr	r3, [pc, #32]	; (800193c <vgaSetup+0x1a4>)
  800191c:	4a03      	ldr	r2, [pc, #12]	; (800192c <vgaSetup+0x194>)
  800191e:	639a      	str	r2, [r3, #56]	; 0x38
-
-		/* USER CODE BEGIN TIM1_MspInit 1 */
-
-		/* USER CODE END TIM1_MspInit 1 */
-	}
+	HAL_TIM_Encoder_Start(htim, Channel);
+	HAL_TIM_DMABurst_WriteStart(htim, BurstBaseAddress, BurstRequestSrc, BurstBuffer, BurstLength);
+	HAL_TIM_OC_Start_DMA(htim, Channel, pData, Length);
+	HAL_TIM_DMABurst_MultiWriteStart(htim, BurstBaseAddress, BurstRequestSrc, BurstBuffer, BurstLength, DataLength);
+	//*/
 }
  8001920:	bf00      	nop
  8001922:	3710      	adds	r7, #16
@@ -3693,103 +3693,46 @@ void vgaStart(){
  800199c:	40020814 	.word	0x40020814
 
 080019a0 <Reset_Handler>:
-
-    .section  .text.Reset_Handler
-  .weak  Reset_Handler
-  .type  Reset_Handler, %function
-Reset_Handler:  
-  ldr   sp, =_estack    		 /* set stack pointer */
  80019a0:	f8df d034 	ldr.w	sp, [pc, #52]	; 80019d8 <LoopFillZerobss+0x12>
-
-/* Copy the data segment initializers from flash to SRAM */  
-  ldr r0, =_sdata
  80019a4:	480d      	ldr	r0, [pc, #52]	; (80019dc <LoopFillZerobss+0x16>)
-  ldr r1, =_edata
  80019a6:	490e      	ldr	r1, [pc, #56]	; (80019e0 <LoopFillZerobss+0x1a>)
-  ldr r2, =_sidata
  80019a8:	4a0e      	ldr	r2, [pc, #56]	; (80019e4 <LoopFillZerobss+0x1e>)
-  movs r3, #0
  80019aa:	2300      	movs	r3, #0
-  b LoopCopyDataInit
  80019ac:	e002      	b.n	80019b4 <LoopCopyDataInit>
 
 080019ae <CopyDataInit>:
-
-CopyDataInit:
-  ldr r4, [r2, r3]
  80019ae:	58d4      	ldr	r4, [r2, r3]
-  str r4, [r0, r3]
  80019b0:	50c4      	str	r4, [r0, r3]
-  adds r3, r3, #4
  80019b2:	3304      	adds	r3, #4
 
 080019b4 <LoopCopyDataInit>:
-
-LoopCopyDataInit:
-  adds r4, r0, r3
  80019b4:	18c4      	adds	r4, r0, r3
-  cmp r4, r1
  80019b6:	428c      	cmp	r4, r1
-  bcc CopyDataInit
  80019b8:	d3f9      	bcc.n	80019ae <CopyDataInit>
-  
-/* Zero fill the bss segment. */
-  ldr r2, =_sbss
  80019ba:	4a0b      	ldr	r2, [pc, #44]	; (80019e8 <LoopFillZerobss+0x22>)
-  ldr r4, =_ebss
  80019bc:	4c0b      	ldr	r4, [pc, #44]	; (80019ec <LoopFillZerobss+0x26>)
-  movs r3, #0
  80019be:	2300      	movs	r3, #0
-  b LoopFillZerobss
  80019c0:	e001      	b.n	80019c6 <LoopFillZerobss>
 
 080019c2 <FillZerobss>:
-
-FillZerobss:
-  str  r3, [r2]
  80019c2:	6013      	str	r3, [r2, #0]
-  adds r2, r2, #4
  80019c4:	3204      	adds	r2, #4
 
 080019c6 <LoopFillZerobss>:
-
-LoopFillZerobss:
-  cmp r2, r4
  80019c6:	42a2      	cmp	r2, r4
-  bcc FillZerobss
  80019c8:	d3fb      	bcc.n	80019c2 <FillZerobss>
-
-/* Call the clock system initialization function.*/
-  bl  SystemInit   
  80019ca:	f7ff fb73 	bl	80010b4 <SystemInit>
-/* Call static constructors */
-    bl __libc_init_array
  80019ce:	f002 fe45 	bl	800465c <__libc_init_array>
-/* Call the application's entry point.*/
-  bl  main
  80019d2:	f7fe fefb 	bl	80007cc <main>
-  bx  lr    
  80019d6:	4770      	bx	lr
-  ldr   sp, =_estack    		 /* set stack pointer */
  80019d8:	20018000 	.word	0x20018000
-  ldr r0, =_sdata
  80019dc:	20000000 	.word	0x20000000
-  ldr r1, =_edata
  80019e0:	20000080 	.word	0x20000080
-  ldr r2, =_sidata
  80019e4:	0800519c 	.word	0x0800519c
-  ldr r2, =_sbss
  80019e8:	20000080 	.word	0x20000080
-  ldr r4, =_ebss
  80019ec:	20010028 	.word	0x20010028
 
 080019f0 <ADC_IRQHandler>:
- * @retval None       
-*/
-    .section  .text.Default_Handler,"ax",%progbits
-Default_Handler:
-Infinite_Loop:
-  b  Infinite_Loop
  80019f0:	e7fe      	b.n	80019f0 <ADC_IRQHandler>
 	...
 
