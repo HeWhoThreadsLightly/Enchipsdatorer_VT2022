@@ -61,8 +61,8 @@ all: main-build
 main-build: osTest.elf secondary-outputs
 
 # Tool invocations
-osTest.elf osTest.map: $(OBJS) $(USER_OBJS) C:\Users\Privat\Documents\git\Enchipsdatorer_VT2022\osTest\STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "osTest.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Privat\Documents\git\Enchipsdatorer_VT2022\osTest\STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="osTest.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+osTest.elf osTest.map: $(OBJS) $(USER_OBJS) C:\Users\Orion\Documents\git\Enchipsdatorer_VT2022\osTest\STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "osTest.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Orion\Documents\git\Enchipsdatorer_VT2022\osTest\STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="osTest.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

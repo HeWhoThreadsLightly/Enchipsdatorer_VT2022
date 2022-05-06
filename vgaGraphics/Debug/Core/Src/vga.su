@@ -30,5 +30,5 @@
 ../Core/Src/vga.c:500:6:vgaFullCallBack	16	static
 ../Core/Src/vga.c:505:6:vgaCopyAndSetCallBack	16	static
 ../Core/Src/vga.c:510:6:vgaSetup	24	static
-../Core/Src/vga.c:597:6:vgaStart	8	static
-../Core/Src/vga.c:611:6:vgaStop	4	static
+../Core/Src/vga.c:598:6:vgaStart	8	static
+../Core/Src/vga.c:612:6:vgaStop	4	static
