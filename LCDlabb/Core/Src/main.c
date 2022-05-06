@@ -173,9 +173,12 @@ int main(void)
 	  HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
   }
   uart_print_cd(&huart2, &my_clock);
+
   TextLCDType hlcd;
+
   TextLCD_Init(&hlcd, &hi2c1, 0x4E);
   TextLCD_SetBacklightFlag(GPIO_PIN_SET);
+
   TextLCD_Clear(&hlcd);
   TextLCD_Home(&hlcd);
   TextLCD_PutStr(&hlcd, "Hello world");

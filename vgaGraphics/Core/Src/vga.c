@@ -16,7 +16,7 @@ http://tinyvga.com/vga-timing/640x400@70Hz
 
 General timing
 Screen refresh rate	70 Hz
-Vertical refresh	31.46875 kHz
+Vertical refresh	31.46875 kHz/4/1.2
 Pixel freq.	25.175 MHz
 
 Horizontal timing (line)
