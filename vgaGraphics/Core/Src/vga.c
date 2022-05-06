@@ -233,23 +233,23 @@ void setHorizontalSync(Color * lineBuffPart){
 	//uses 32 bit accesses to clear faster
 
 	//clear VerticalSync everywhere / clear entire buffer
-	memSet(0, (uint32_t*)lineBuffPart, horiWhole/4);
+	memSet(0, (uint32_t*)lineBuffPart, horiWhole);
 	//set Horizontal sync
-	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiFront], horiSync/4);
+	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiFront], horiSync);
 }
 
 void setHorizontalSyncP1(Color * lineBuffPart){
 	//uses 32 bit accesses to clear faster
 
 	//clear VerticalSync everywhere / clear entire buffer
-	memSet(0, (uint32_t*)lineBuffPart, horiWhole/4);
+	memSet(0, (uint32_t*)lineBuffPart, horiWhole);
 }
 
 void setHorizontalSyncP2(Color * lineBuffPart){
 	//uses 32 bit accesses to clear faster
 
 	//set Horizontal sync
-	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiFront], horiSync/4);
+	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiFront], horiSync);
 }
 
 void __weak renderLine(Color * lineBuffPart, const int lineCount){

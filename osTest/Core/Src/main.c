@@ -40,7 +40,7 @@
 
 /* Private variables ---------------------------------------------------------*/
  TIM_HandleTypeDef htim5;
-DMA_HandleTypeDef hdma_tim5_ch2;
+DMA_HandleTypeDef hdma_tim5_up;
 
 UART_HandleTypeDef huart2;
 
@@ -98,9 +98,13 @@ int main(void)
   MX_DMA_Init();
   MX_TIM5_Init();
   /* USER CODE BEGIN 2 */
-  HAL_DMA_RegisterCallback(&hdma_tim5_ch2, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaLineDone);
-  HAL_DMA_Start_IT(&hdma_tim5_ch2, SrcAddress, DstAddress, DataLength);
+  /*
+  __HAL_TIM_ENABLE_DMA(&htim5, hdma_tim5_up);
+  __HAL_TIM_ENABLE(&htim5);
+  HAL_DMA_RegisterCallback(&hdma_tim5_up, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaLineDone);
+  HAL_DMA_Start_IT(&hdma_tim5_up, SrcAddress, DstAddress, DataLength);
   HAL_TIM_Base_Start(&htim5);
+//*/
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -194,7 +198,7 @@ static void MX_TIM5_Init(void)
   {
     Error_Handler();
   }
-  if (HAL_TIM_OC_Init(&htim5) != HAL_OK)
+  if (HAL_TIM_PWM_Init(&htim5) != HAL_OK)
   {
     Error_Handler();
   }
@@ -204,11 +208,11 @@ static void MX_TIM5_Init(void)
   {
     Error_Handler();
   }
-  sConfigOC.OCMode = TIM_OCMODE_FORCED_ACTIVE;
-  sConfigOC.Pulse = 0;
+  sConfigOC.OCMode = TIM_OCMODE_PWM1;
+  sConfigOC.Pulse = 1;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
-  if (HAL_TIM_OC_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_2) != HAL_OK)
+  if (HAL_TIM_PWM_ConfigChannel(&htim5, &sConfigOC, TIM_CHANNEL_1) != HAL_OK)
   {
     Error_Handler();
   }
@@ -284,9 +288,9 @@ static void MX_DMA_Init(void)
   }
 
   /* DMA interrupt init */
-  /* DMA1_Stream4_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream4_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream4_IRQn);
+  /* DMA1_Stream6_IRQn interrupt configuration */
+  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
+  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
 
 }
 
