@@ -23,7 +23,7 @@ extern Color screenBuff [];//horiRes*vertRes
 
 extern TIM_HandleTypeDef * vgaPixelTimer;
 extern DMA_HandleTypeDef * vgaCircularDMA;
-extern DMA_HandleTypeDef * memcopyDMA;
+extern DMA_HandleTypeDef * memCopyDMA;
 
 void setRed(Color * c, char r);
 void setGreen(Color * c, char g);
@@ -34,8 +34,8 @@ void setVblank(Color * c);
 
 
 
-HAL_StatusTypeDef memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
-HAL_StatusTypeDef memSet(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
+HAL_StatusTypeDef old_memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
+HAL_StatusTypeDef old_memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength);
 
 void registerDebugInterupts(UART_HandleTypeDef * huart2);
 
