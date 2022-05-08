@@ -39,12 +39,42 @@ Whole frame		449			14.268123138034
  *
  */
 
-vgaData vgaGlobal;
+//VGA resolution constants
+//enum { horiRes = 640/vgaUpscale};//defined in header
+enum { horiFront = 16/vgaUpscale};
+enum { horiSync = 96/vgaUpscale};
+enum { horiBack = 48/vgaUpscale};
+enum { horiWhole = 800/vgaUpscale};
+
+//enum { vertRes = 400/vgaUpscale};//defined in header
+enum { vertArea = 400 };
+enum { vertFront = 12};
+enum { vertSync = 2};
+enum { vertBack = 35};
+enum { vertWhole = 449};
+
+//main buffers
+_Alignas(uint32_t) Color lineBuff[horiWhole*2] = {0};//double  buffered
+_Alignas(uint32_t) Color screenBuff[horiRes*vertRes] = {0};//rows*columns
+//todo remove and replace with a setCharAtXY function
+
+//hardware interfaces
+TIM_HandleTypeDef * vgaPixelTimer;
+DMA_HandleTypeDef * vgaCircularDMA;
+DMA_HandleTypeDef * memcopyDMA;
+
+//state machine state defined in vgaSetup
+int lineCount;//start right after a vertical sync
+int lineUpscale;//copy old buffer if non zero
+int readyForNextLine;
+vgaState state;
+Color * activeBuffer;
+Color * oldBuffer;
 
 void checkAsserts(){//check memory layout assumptions
 	//32 bit accesses is used to sped up dma transfers alignment of start and end is needed to avoid manual copying of leading and trailing bytes
-	_Static_assert((int)&(vgaGlobal.lineBuff) % sizeof(uint32_t) == 0, "Line buff is not aligned for uint32 accesses");
-	_Static_assert((int)&(vgaGlobal.screenBuff) % sizeof(uint32_t) == 0, "Screen buff is not aligned for uint32 accesses");
+	_Static_assert((int)&lineBuff % sizeof(uint32_t) == 0, "Line buff is not aligned for uint32 accesses");
+	_Static_assert((int)&screenBuff % sizeof(uint32_t) == 0, "Screen buff is not aligned for uint32 accesses");
 
 	//checks that 32 bit mode works for all subsets of the line buffer
 	_Static_assert(horiRes % sizeof(uint32_t) == 0, "Horizontal area is not 32 bit aligned");
@@ -86,14 +116,13 @@ void setVblank(Color * c){
  * @param DataLength number of unit32_t to be copied
  */
 HAL_StatusTypeDef memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength){
-	DMA_HandleTypeDef * memCopyDMA = vgaGlobal.memCopyDMA;
-	memCopyDMA->Init.PeriphInc = DMA_PINC_ENABLE;
-	if (HAL_DMA_Init(memCopyDMA) != HAL_OK) {
+
+	memcopyDMA->Init.PeriphInc = DMA_PINC_ENABLE;
+	if (HAL_DMA_Init(memcopyDMA) != HAL_OK) {
 		Error_Handler();
 	}
 	//SET_BIT(vgaCircularDMA.Instance->CR, DMA_MINC_ENABLE);
-	return HAL_DMA_Start_IT(memCopyDMA, (uint32_t)SrcAddress, (uint32_t)DstAddress, DataLength);
-	//return here from memCopyCompletCallBack callback
+	return HAL_DMA_Start_IT(memcopyDMA, (uint32_t)SrcAddress, (uint32_t)DstAddress, DataLength);
 }
 
 /**
@@ -106,15 +135,14 @@ HAL_StatusTypeDef memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t
  * @param DataLength number of unit32_t to be written
  */
 HAL_StatusTypeDef memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength){
-	DMA_HandleTypeDef * memCopyDMA = vgaGlobal.memCopyDMA;
 	static volatile uint32_t setVal = 0;
 	setVal = value;
-	memCopyDMA->Init.PeriphInc = DMA_PINC_DISABLE;
-	if (HAL_DMA_Init(memCopyDMA) != HAL_OK) {
+	memcopyDMA->Init.PeriphInc = DMA_PINC_DISABLE;
+	if (HAL_DMA_Init(memcopyDMA) != HAL_OK) {
 		Error_Handler();
 	}
 	//CLEAR_BIT(vgaCircularDMA.Instance->CR, DMA_MINC_ENABLE);
-	return HAL_DMA_Start_IT(memCopyDMA, (uint32_t)&setVal, (uint32_t)DstAddress, DataLength);
+	return HAL_DMA_Start_IT(memcopyDMA, (uint32_t)&setVal, (uint32_t)DstAddress, DataLength);
 }
 
 UART_HandleTypeDef * huartE;
@@ -163,15 +191,15 @@ void vga_DMA_XFER_ALL_CB_ID(){
 
 
 
-void registerDebugInterupts(DMA_HandleTypeDef * memCopyDMA, UART_HandleTypeDef * t_huartE){
+void registerDebugInterupts(UART_HandleTypeDef * t_huartE){
 	huartE = t_huartE;
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_CPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vga_DMA_XFER_HALFCPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_M1CPLT_CB_ID, vga_DMA_XFER_M1CPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_M1HALFCPLT_CB_ID, vga_DMA_XFER_M1HALFCPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ERROR_CB_ID, vga_DMA_XFER_ERROR_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_ABORT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ALL_CB_ID, vga_DMA_XFER_ALL_CB_ID);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_CPLT_CB_ID);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vga_DMA_XFER_HALFCPLT_CB_ID);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_M1CPLT_CB_ID, vga_DMA_XFER_M1CPLT_CB_ID);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_M1HALFCPLT_CB_ID, vga_DMA_XFER_M1HALFCPLT_CB_ID);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_ERROR_CB_ID, vga_DMA_XFER_ERROR_CB_ID);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_ABORT_CB_ID);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_ALL_CB_ID, vga_DMA_XFER_ALL_CB_ID);
 }
 
 void clearVisibleArea(Color * lineBuffPart){
@@ -225,157 +253,178 @@ void setHorizontalSyncP2(Color * lineBuffPart){
 	memSet(0x40404040, (uint32_t*)&lineBuffPart[horiFront], horiSync);
 }
 
-void __weak renderLine(Color * screenBuff, Color * lineBuffPart, const int lineCount){
+void __weak renderLine(Color * lineBuffPart, const int lineCount){
 	//both buffers are 32 bit aligned
 
 	char str[81] = { '\0' };
 	int str_len = sprintf(str, "Rendering line %i\r\n", lineCount);
 	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
 	//copy the current line of the screen buffer in to the line buffer
-	memCopy((uint32_t*)&screenBuff[horiRes*lineCount], (uint32_t *)&lineBuffPart[horiFront+horiSync+horiBack], horiRes);
+	memCopy((uint32_t*)&screenBuff[horiRes*lineCount], (uint32_t *)&lineBuffPart[horiFront+horiSync+horiBack], horiRes/4);
 }
 
 void copyLastLine(Color * activeBuffer, const Color * oldBuffer){
 	//both buffers are 32 bit aligned
-	memCopy((uint32_t*)&oldBuffer[horiFront+horiSync+horiBack], (uint32_t *)&activeBuffer[horiFront+horiSync+horiBack], horiRes);
+	memCopy((uint32_t*)&oldBuffer[horiFront+horiSync+horiBack], (uint32_t *)&activeBuffer[horiFront+horiSync+horiBack], horiRes/4);
 }
 
-void vgaStateMachine(vgaData * vga, int activatedFromCircularBuffer){
 
-	while(HAL_DMA_PollForTransfer(vga->memCopyDMA, HAL_DMA_FULL_TRANSFER, 100) != HAL_OK){
+
+void vgaStateMachine(int activatedFromCircularBuffer){
+
+	while(HAL_DMA_PollForTransfer(memcopyDMA, HAL_DMA_FULL_TRANSFER, 100) != HAL_OK){
 		//error triggered early should still be in user code
 
 	}
 
 	if(activatedFromCircularBuffer){
-		vga->lineCount++;
-		Color * tmp = vga->activeBuffer;
-		vga->activeBuffer = vga->oldBuffer;
-		vga->oldBuffer = tmp;
+		if(!readyForNextLine){
+			//we ran out of time rendering the last line
+			//todo log error
+		}
+		readyForNextLine = 0;
+		lineCount++;
+		Color * tmp = activeBuffer;
+		activeBuffer = oldBuffer;
+		oldBuffer = tmp;
+
 	}
 
 	while(1){
-		switch(vga->state){
+		switch(state){
 		//Render screen
 		case sDecideNext:{
-			if(vga->lineCount < vertArea){
-				vga->state = sRenderLine;
+			if(lineCount < vertArea){
+				state = sRenderLine;
 			}else{
-				vga->state = sExitVisible1;
+				state = sExitVisible1;
 			}
 			break;
 		}
 		case sRenderLine:{
-			renderLine(vga->screenBuff, vga->activeBuffer, vga->lineCount);//render line by copying from screenBuff
-			vga->lineUpscale = 1;
-			vga->state = sDoneRenderLine;
+			renderLine(activeBuffer, lineCount);//render line by copying from screenBuff
+			lineUpscale = 1;
+			state = sDoneRenderLine;
 			return;
 		}
 		case sDoneRenderLine:{
-			vga->state = vgaUpscale==1?sDecideNext:sCopyLastLine;
+			state = vgaUpscale==1?sDecideNext:sCopyLastLine;
+			readyForNextLine = 1;
 			return;
 		}
 		case sCopyLastLine:{
 			//we are upscaling and can save recourses by copying last buffer
 			//would be faster if we could use a fifo queue of dma transfers instead of a circular buffer
-			copyLastLine(vga->activeBuffer, vga->oldBuffer);
-			vga->state = sDoneCopylastLine;
+			copyLastLine(activeBuffer, oldBuffer);
+			state = sDoneCopylastLine;
 			return;
 		}
 		case sDoneCopylastLine:{
-			vga->lineUpscale++;
-			if(vga->lineUpscale == vgaUpscale){//waits in current state until we need to render a new line and can't reuse old buffers
-				vga->lineUpscale = 0;
-				vga->state = sDecideNext;
+			lineUpscale++;
+			if(lineUpscale == vgaUpscale){//waits in current state until we need to render a new line and can't reuse old buffers
+				lineUpscale = 0;
+				state = sDecideNext;
+				readyForNextLine = 1;
 			}
 			return;
 		}
 		//Exit visible area
 		case sExitVisible1:{
-			clearVisibleArea(vga->activeBuffer);//clear leftover data in buffer 1
-			vga->state = sDoneExitVisible1;
+			clearVisibleArea(activeBuffer);//clear leftover data in buffer 1
+			state = sDoneExitVisible1;
 			return;
 		}
 		case sDoneExitVisible1:{
-			vga->state = sExitVisible2;
+			state = sExitVisible2;
+			readyForNextLine = 1;
 			return;
 		}
 		case sExitVisible2:{
-			clearVisibleArea(vga->activeBuffer);//clear leftover data in buffer 2
-			vga->state = sDoneExitVisible2;
+			clearVisibleArea(activeBuffer);//clear leftover data in buffer 2
+			state = sDoneExitVisible2;
 			return;
 		}
 		case sDoneExitVisible2:{
-			vga->state = sSetVsync1P1;
+			state = sSetVsync1P1;
+			readyForNextLine = 1;
 			return;
 		}
 		//Vertical sync
 		case sSetVsync1P1:{
-			if(vga->lineCount == vertArea + vertFront){//wait until vertical sync starts
-				setVerticalSyncP1(vga->activeBuffer);//set vertical sync in buffer 1
-				vga->state = sSetVsync1P2;
+			if(lineCount == vertArea + vertFront){//wait until vertical sync starts
+				setVerticalSyncP1(activeBuffer);//set vertical sync in buffer 1
+				state = sSetVsync1P2;
+			}else{
+				readyForNextLine = 1;
 			}
 			return;
 		}
 		case sSetVsync1P2:{
-			setVerticalSyncP2(vga->activeBuffer);
-			vga->state = sDoneSetVsync1;
+			setVerticalSyncP2(activeBuffer);
+			state = sDoneSetVsync1;
 			return;
 		}
 		case sDoneSetVsync1:{
-			vga->state = sSetVsync2P1;
+			state = sSetVsync2P1;
+			readyForNextLine = 1;
 			return;
 		}
 		case sSetVsync2P1:{
-			setVerticalSyncP1(vga->activeBuffer);//set Vertical Sync in buffer 2
-			vga->state = sSetVsync2P2;
+			setVerticalSyncP1(activeBuffer);//set Vertical Sync in buffer 2
+			state = sSetVsync2P2;
 			return;
 		}
 		case sSetVsync2P2:{
-			setVerticalSyncP2(vga->activeBuffer);
-			vga->state = sDoneSetVsync2;
+			setVerticalSyncP2(activeBuffer);
+			state = sDoneSetVsync2;
 			return;
 		}
 		case sDoneSetVsync2:{
-			vga->state = sSetHsync1P1;
+			state = sSetHsync1P1;
+			readyForNextLine = 1;
 			return;
 		}
 		//Horizontal sync
 		case sSetHsync1P1:{
-			if(vga->lineCount == vertArea + vertFront + vertSync){//wait until vertical sync ends
-				setHorizontalSyncP1(vga->activeBuffer);//set horizontal sync in buffer 2
-				vga->state = sSetHsync1P2;
+			if(lineCount == vertArea + vertFront + vertSync){//wait until vertical sync ends
+				setHorizontalSyncP1(activeBuffer);//set horizontal sync in buffer 2
+				state = sSetHsync1P2;
+			}else{
+				readyForNextLine = 1;
 			}
 			return;
 		}
 		case sSetHsync1P2:{
-			setHorizontalSyncP2(vga->activeBuffer);
-			vga->state = sDoneSetHsync1;
+			setHorizontalSyncP2(activeBuffer);
+			state = sDoneSetHsync1;
 			return;
 		}
 		case sDoneSetHsync1:{
-			vga->state = sSetHsync2P1;
+			state = sSetHsync2P1;
+			readyForNextLine = 1;
 			return;
 		}
 		case sSetHsync2P1:{
-			setVerticalSyncP1(vga->activeBuffer);//set Horizontal Sync in buffer 2
-			vga->state = sSetHsync2P2;
+			setVerticalSyncP1(activeBuffer);//set Horizontal Sync in buffer 2
+			state = sSetHsync2P2;
 			return;
 		}
 		case sSetHsync2P2:{
-			setVerticalSyncP2(vga->activeBuffer);
-			vga->state = sDoneSetHsync2;
+			setVerticalSyncP2(activeBuffer);
+			state = sDoneSetHsync2;
 			return;
 		}
 		case sDoneSetHsync2:{
-			vga->state = sEndBuffer;
+			state = sEndBuffer;
+			readyForNextLine = 1;
 			return;
 		}
 		case sEndBuffer:{
-			if(vga->lineCount == vertWhole){//wait until end of the screen
-				vga->state = sDecideNext;
-				vga->lineCount = -1;// set line count back to the start
+			if(lineCount == vertWhole){//wait until end of the screen
+				state = sDecideNext;
+				lineCount = -1;// set line count back to the start
 			}
+			readyForNextLine = 1;
 			return;
 		}
 	}
@@ -386,56 +435,53 @@ void vgaStateMachine(vgaData * vga, int activatedFromCircularBuffer){
 
 void vgaHalfCallBack(DMA_HandleTypeDef *_hdma){
 	//prepareLine(lineBuff, &lineBuff[horiWhole]);
-	vgaStateMachine(&vgaGlobal, 1);
+	vgaStateMachine(1);
 }
 
 void vgaFullCallBack(DMA_HandleTypeDef *_hdma){
 	//prepareLine(&lineBuff[horiWhole], lineBuff);
-	vgaStateMachine(&vgaGlobal, 1);
+	vgaStateMachine(1);
 }
 
 void vgaCopyAndSetCallBack(DMA_HandleTypeDef *_hdma){
-	vgaStateMachine(&vgaGlobal, 0);
+	vgaStateMachine(0);
 }
 
 
-vgaData * vgaSetup(
-		TIM_HandleTypeDef * vgaPixelTimer,
-		DMA_HandleTypeDef * vgaCircularDMA,
-		DMA_HandleTypeDef * memCopyDMA){
-	vgaData * vga = &vgaGlobal;
+void vgaSetup(
+		TIM_HandleTypeDef * vgaPixelTimer_,
+		DMA_HandleTypeDef * vgaCircularDMA_,
+		DMA_HandleTypeDef * memcopyDMA_){
+	vgaPixelTimer = vgaPixelTimer_;
+	vgaCircularDMA = vgaCircularDMA_;
+	memcopyDMA = memcopyDMA_;
 
-	//Initialize hardware
-	vga->vgaPixelTimer = vgaPixelTimer;
-	vga->vgaCircularDMA = vgaCircularDMA;
-	vga->memCopyDMA = memCopyDMA;
-
-	//Initialize state machine
-	vga->state = sSetVsync1P1;
-	vga->lineCount = vertArea + vertFront + vertSync - 1;//start right after a vertical sync
-	vga->lineUpscale = 0;//copy old buffer if non zero
-	vga->activeBuffer = vga->lineBuff;
-	vga->oldBuffer = &vga->lineBuff[horiWhole];
-
-	//todo zero fill line and screen buff
-	return vga;
+	lineCount = vertArea + vertFront + vertSync - 1;//start right after a vertical sync
+	lineUpscale = 0;//copy old buffer if non zero
+	readyForNextLine = 1;
+	state = sSetVsync1P1;
+	activeBuffer = lineBuff;
+	oldBuffer = &lineBuff[horiWhole];
 }
 
-void vgaStart(vgaData * vga){
-	HAL_DMA_RegisterCallback(vga->vgaCircularDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaHalfCallBack);
-	HAL_DMA_RegisterCallback(vga->vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
-	HAL_DMA_RegisterCallback(vga->memCopyDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaCopyAndSetCallBack);
+void vgaStart(){
+	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaHalfCallBack);
+	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
+	HAL_DMA_RegisterCallback(memcopyDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaCopyAndSetCallBack);
 
-	//HAL_DMA_Start_IT(memcopyDMA, SrcAddress, DstAddress, DataLength);
+	//__HAL_TIM_ENABLE_DMA(vgaPixelTimer, *vgaCircularDMA);
+	//vgaPixelTimer->Instance->DIER |= hdma_tim5_up;
+	//__HAL_TIM_ENABLE(&htim5);
+	HAL_TIM_Base_Start(vgaPixelTimer);
 
 	//prepare the buffer with the first two lines
-	vgaStateMachine(vga, 1);
-	vgaStateMachine(vga, 1);
+	vgaStateMachine(1);
+	vgaStateMachine(1);
 	//start the circular buffer dma transfer aka vga main loop
-	HAL_DMA_Start_IT(vga->vgaCircularDMA, (uint32_t)&(vga->lineBuff[0]), (uint32_t)&(GPIOC->ODR), horiWhole*2);
+	HAL_DMA_Start_IT(vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
 }
 
-void vgaStop(vgaData * vga){
+void vgaStop(){
 	//todo stop the circular buffer copy
 	// write 0 to the vga port
 	// remove call backs

@@ -14,12 +14,38 @@ typedef struct {
 	char value;
 }Color;
 
+enum { vgaUpscale = 2 };
+enum { horiRes = 640/vgaUpscale};
+enum { vertRes = 400/vgaUpscale};
+
+extern Color lineBuff [];//double  buffered = horiWhole*2
+extern Color screenBuff [];//horiRes*vertRes
+
+extern TIM_HandleTypeDef * vgaPixelTimer;
+extern DMA_HandleTypeDef * vgaCircularDMA;
+extern DMA_HandleTypeDef * memcopyDMA;
+
 void setRed(Color * c, char r);
 void setGreen(Color * c, char g);
 void setBlue(Color * c, char b);
 void setRGB(Color * c, char r, char g, char b);
 void setHblank(Color * c);
 void setVblank(Color * c);
+
+
+
+HAL_StatusTypeDef memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
+HAL_StatusTypeDef memSet(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
+
+void registerDebugInterupts(UART_HandleTypeDef * huart2);
+
+void clearVisibleAria(Color * lineBuffPart);
+void setVerticalSync(Color * lineBuffPart);
+void setHorizontalSync(Color * lineBuffPart);
+
+void vgaSetup();
+void vgaStart();
+void vgaStop();
 
 typedef enum {
 	sDecideNext,
@@ -49,52 +75,5 @@ typedef enum {
 
 	sEndBuffer,
 } vgaState;
-
-enum { vgaUpscale = 2 };
-enum { horiRes = 640/vgaUpscale};
-enum { horiFront = 16/vgaUpscale};
-enum { horiSync = 96/vgaUpscale};
-enum { horiBack = 48/vgaUpscale};
-enum { horiWhole = 800/vgaUpscale};
-
-enum { vertRes = 400/vgaUpscale};
-enum { vertArea = 400 };
-enum { vertFront = 12};
-enum { vertSync = 2};
-enum { vertBack = 35};
-enum { vertWhole = 449};
-
-typedef struct {
-	TIM_HandleTypeDef * vgaPixelTimer;
-	DMA_HandleTypeDef * vgaCircularDMA;
-	DMA_HandleTypeDef * memCopyDMA;
-	vgaState state;
-	int lineCount;
-	int lineUpscale;
-	Color * activeBuffer;
-	Color * oldBuffer;
-	_Alignas(uint32_t) Color lineBuff [horiWhole*2];//double  buffered
-	_Alignas(uint32_t) Color screenBuff[horiRes*vertRes];//rows*columns
-} vgaData;
-
-
-
-HAL_StatusTypeDef memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
-HAL_StatusTypeDef memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength);
-
-void registerDebugInterupts(DMA_HandleTypeDef * memCopyDMA, UART_HandleTypeDef * huart2);
-
-void __weak renderLine(Color * screenBuff, Color * lineBuffPart, const int lineCount);
-void clearVisibleAria(Color * lineBuffPart);
-void setVerticalSync(Color * lineBuffPart);
-void setHorizontalSync(Color * lineBuffPart);
-
-vgaData * vgaSetup(
-		TIM_HandleTypeDef * vgaPixelTimer,
-		DMA_HandleTypeDef * vgaCircularDMA,
-		DMA_HandleTypeDef * memCopyDMA);
-void vgaStart(vgaData * vga);
-void vgaStop(vgaData * vga);
-
 
 #endif /* INC_VGA_H_ */

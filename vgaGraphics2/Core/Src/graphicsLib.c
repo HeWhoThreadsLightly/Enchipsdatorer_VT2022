@@ -28,7 +28,7 @@ Color combineColors(Color existing, Color new){
 	}
 }
 
-void renderChar(vgaData * vga, char c, int h, int v, Color background, Color forground){
+void renderChar(char c, int h, int v, Color background, Color forground){
 	uint32_t bitOffset = (c/(Codepage_437_width/Codepage_437_char_width))*(Codepage_437_width*Codepage_437_char_hight)
 					+ (c%(Codepage_437_width/Codepage_437_char_width))*Codepage_437_char_width;
 	char bitBuffer;
@@ -42,9 +42,9 @@ void renderChar(vgaData * vga, char c, int h, int v, Color background, Color for
 			}
 			if(screenPosition >= 0){
 				if(bitBuffer&1){//use foreground color
-					vga->screenBuff[screenPosition] = combineColors(vga->screenBuff[screenPosition], forground);
+					screenBuff[screenPosition] = combineColors(screenBuff[screenPosition], forground);
 				}else{//use background color
-					vga->screenBuff[screenPosition] = combineColors(vga->screenBuff[screenPosition], background);
+					screenBuff[screenPosition] = combineColors(screenBuff[screenPosition], background);
 				}
 			}
 			remainingBits--;
@@ -55,9 +55,9 @@ void renderChar(vgaData * vga, char c, int h, int v, Color background, Color for
 	}
 }
 
-void renderString(vgaData * vga, char * str, int h, int v, Color background, Color forground){
+void renderString(char * str, int h, int v, Color background, Color forground){
 	while(*str != 0){
-		renderChar(vga, *str, h, v, background, forground);
+		renderChar(*str, h, v, background, forground);
 		v += Codepage_437_char_width;
 		str++;
 	}
