@@ -18,12 +18,21 @@ enum { vgaUpscale = 2 };
 enum { horiRes = 640/vgaUpscale};
 enum { vertRes = 400/vgaUpscale};
 
+//main buffers
 extern Color lineBuff [];//double  buffered = horiWhole*2
 extern Color screenBuff [];//horiRes*vertRes
 
+//hardware interfaces
 extern TIM_HandleTypeDef * vgaPixelTimer;
 extern DMA_HandleTypeDef * vgaCircularDMA;
 extern DMA_HandleTypeDef * memCopyDMA;
+
+//state machine state defined in vgaSetup
+extern int lineCount;//start right after a vertical sync
+extern int lineUpscale;//copy old buffer if non zero
+extern int readyForNextLine;
+extern Color * activeBuffer;
+extern Color * oldBuffer;
 
 void setRed(Color * c, char r);
 void setGreen(Color * c, char g);
@@ -38,6 +47,7 @@ HAL_StatusTypeDef old_memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint
 HAL_StatusTypeDef old_memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength);
 
 void registerDebugInterupts(UART_HandleTypeDef * huart2);
+void registerHUART(UART_HandleTypeDef * huart);
 
 void clearVisibleAria(Color * lineBuffPart);
 void setVerticalSync(Color * lineBuffPart);
@@ -76,4 +86,6 @@ typedef enum {
 	sEndBuffer,
 } vgaState;
 
+
+extern vgaState state;
 #endif /* INC_VGA_H_ */

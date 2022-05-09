@@ -71,6 +71,9 @@ vgaState state;
 Color * activeBuffer;
 Color * oldBuffer;
 
+//debug logging
+UART_HandleTypeDef * huartE = NULL;
+
 void checkAsserts(){//check memory layout assumptions
 	//32 bit accesses is used to sped up dma transfers alignment of start and end is needed to avoid manual copying of leading and trailing bytes
 	_Static_assert((int)&lineBuff % sizeof(uint32_t) == 0, "Line buff is not aligned for uint32 accesses");
@@ -145,7 +148,7 @@ HAL_StatusTypeDef old_memSet(uint32_t value, uint32_t * DstAddress, uint32_t Dat
 	return HAL_DMA_Start_IT(memCopyDMA, (uint32_t)&setVal, (uint32_t)DstAddress, DataLength);
 }
 
-UART_HandleTypeDef * huartE;
+
 //HAL_DMA_XFER_CPLT_CB_ID         = 0x00U,  /*!< Full transfer     */
 void vga_DMA_XFER_CPLT_CB_ID(){
 	char str[81] = { '\0' };
@@ -200,6 +203,10 @@ void registerDebugInterupts(UART_HandleTypeDef * t_huartE){
 	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ERROR_CB_ID, vga_DMA_XFER_ERROR_CB_ID);
 	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_ABORT_CB_ID);
 	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ALL_CB_ID, vga_DMA_XFER_ALL_CB_ID);
+}
+
+void registerHUART(UART_HandleTypeDef * huart){
+	huartE = huart;
 }
 
 void clearVisibleArea(Color * lineBuffPart){
@@ -271,11 +278,6 @@ void copyLastLine(Color * activeBuffer, const Color * oldBuffer){
 
 
 void vgaStateMachine(int activatedFromCircularBuffer){
-
-	while(HAL_DMA_PollForTransfer(memCopyDMA, HAL_DMA_FULL_TRANSFER, 100) != HAL_OK){
-		//error triggered early should still be in user code
-
-	}
 
 	if(activatedFromCircularBuffer){
 		if(!readyForNextLine){
@@ -456,7 +458,7 @@ void vgaSetup(
 	vgaCircularDMA = vgaCircularDMA_;
 	memCopyDMA = memCopyDMA_;
 
-	lineCount = vertArea + vertFront + vertSync - 1;//start right after a vertical sync
+	lineCount = vertArea + vertFront - 1 - 2;//start right after a vertical sync
 	lineUpscale = 0;//copy old buffer if non zero
 	readyForNextLine = 1;
 	state = sSetVsync1P1;
@@ -468,15 +470,19 @@ void vgaStart(){
 	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaHalfCallBack);
 	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
 	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaCopyAndSetCallBack);
-
+	HAL_DMA_Init(vgaCircularDMA);
+	vgaPixelTimer->Instance->DIER |= TIM_DMA_UPDATE | TIM_DMA_TRIGGER | TIM_DMA_ID_UPDATE | TIM_DMA_ID_TRIGGER | TIM_DMA_CC2 | TIM_DMA_ID_CC2;
 	//__HAL_TIM_ENABLE_DMA(vgaPixelTimer, *vgaCircularDMA);
 	//vgaPixelTimer->Instance->DIER |= hdma_tim5_up;
 	//__HAL_TIM_ENABLE(&htim5);
-	HAL_TIM_Base_Start(vgaPixelTimer);
+	HAL_TIM_Base_Init(vgaPixelTimer);
+	HAL_TIM_Base_Start_IT(vgaPixelTimer);
+	HAL_TIM_PWM_Start(vgaPixelTimer, TIM_CHANNEL_2);
+	//HAL_TIM_Base_Start_DMA(htim, pData, Length);//used to load the timer with new times each time it triggers not our usecase
 
 	//prepare the buffer with the first two lines
-	vgaStateMachine(1);
-	vgaStateMachine(1);
+	//vgaStateMachine(1);
+	//vgaStateMachine(1);
 	//start the circular buffer dma transfer aka vga main loop
 	HAL_DMA_Start_IT(vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
 }
