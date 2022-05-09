@@ -134,6 +134,8 @@ HAL_StatusTypeDef memCopy(DMA_HandleTypeDef * memtomemDMA, void * SrcAddress, vo
 }
 
 HAL_StatusTypeDef memSet(DMA_HandleTypeDef * memtomemDMA, uint32_t value, void * DstAddress, uint32_t DataLength){
+	HAL_DMAEx_MultiBufferStart_IT(hdma, SrcAddress, DstAddress, SecondMemAddress, DataLength);
+	HAL_DMAEx_ChangeMemory(hdma, Address, memory);
 
 	return memSet32(memtomemDMA, value, DstAddress, DataLength);
 }
