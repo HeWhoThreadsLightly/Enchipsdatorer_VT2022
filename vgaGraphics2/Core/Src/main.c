@@ -184,6 +184,11 @@ int main(void)
 		}
 	}
 
+	for(int i = 0; i < 800*2; i += 2){
+		lineBuff[i].value = ~0;
+		lineBuff[i+1].value = 0;
+	}
+
 	dumpLine();
 	printState(HAL_DMA_GetState(&hdma_memtomem_dma2_stream0));
 
@@ -225,11 +230,15 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	int lastLine = -100;
 	while (1)
 	{
 		HAL_Delay(100);
-		str_len = sprintf(str, "%i\r\n", lineCount);
-		HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+		if(lastLine != lineCount){
+			lastLine = lineCount;
+			str_len = sprintf(str, "Line %i\r\n", lineCount);
+			HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+		}
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */

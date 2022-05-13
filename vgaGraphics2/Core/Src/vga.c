@@ -176,8 +176,29 @@ void vga_DMA_XFER_M1HALFCPLT_CB_ID(){
 //HAL_DMA_XFER_ERROR_CB_ID        = 0x04U,  /*!< Error             */
 void vga_DMA_XFER_ERROR_CB_ID(){
 	char str[81] = { '\0' };
-	int str_len = sprintf(str, "DMA Error\r\n");
-	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+	char * err = "Default";
+	uint32_t errorCode = HAL_DMA_GetError(vgaCircularDMA);
+	if(errorCode == HAL_DMA_ERROR_NONE){
+		int str_len = sprintf(str, "DMA %s\r\n", "No error");
+		HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+	}
+	while(errorCode){
+		switch(errorCode){
+		case HAL_DMA_ERROR_NONE            : err = "No error";break;    /*!< No error                               */
+		case HAL_DMA_ERROR_TE              : err = "Transfer error";break;    /*!< Transfer error                         */
+		case HAL_DMA_ERROR_FE              : err = "FIFO error";break;    /*!< FIFO error                             */
+		case HAL_DMA_ERROR_DME             : err = "Direct Mode error";break;    /*!< Direct Mode error                      */
+		case HAL_DMA_ERROR_TIMEOUT         : err = "Timeout error";break;    /*!< Timeout error                          */
+		case HAL_DMA_ERROR_PARAM           : err = "Parameter error";break;    /*!< Parameter error                        */
+		case HAL_DMA_ERROR_NO_XFER         : err = "Abort requested with no Xfer ongoing";break;    /*!< Abort requested with no Xfer ongoing   */
+		case HAL_DMA_ERROR_NOT_SUPPORTED   : err = "Not supported mode";break;    /*!< Not supported mode                     */
+		}
+
+		int str_len = sprintf(str, "DMA %s\r\n", err);
+		HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+		errorCode &= errorCode - 1;
+	};
+
 }
 //HAL_DMA_XFER_ABORT_CB_ID        = 0x05U,  /*!< Abort             */
 void vga_DMA_XFER_ABORT_CB_ID(){
@@ -436,11 +457,13 @@ void vgaStateMachine(int activatedFromCircularBuffer){
 
 void vgaHalfCallBack(DMA_HandleTypeDef *_hdma){
 	//prepareLine(lineBuff, &lineBuff[horiWhole]);
+	vga_DMA_XFER_HALFCPLT_CB_ID();
 	vgaStateMachine(1);
 }
 
 void vgaFullCallBack(DMA_HandleTypeDef *_hdma){
 	//prepareLine(&lineBuff[horiWhole], lineBuff);
+	vga_DMA_XFER_CPLT_CB_ID();
 	vgaStateMachine(1);
 }
 
@@ -470,10 +493,8 @@ void vgaStart(){
 	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
 	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaCopyAndSetCallBack);
 	HAL_DMA_Init(vgaCircularDMA);
-	vgaPixelTimer->Instance->DIER |= TIM_DMA_UPDATE | TIM_DMA_TRIGGER | TIM_DMA_ID_UPDATE | TIM_DMA_ID_TRIGGER | TIM_DMA_CC2 | TIM_DMA_ID_CC2;
-	//__HAL_TIM_ENABLE_DMA(vgaPixelTimer, *vgaCircularDMA);
-	//vgaPixelTimer->Instance->DIER |= hdma_tim5_up;
 	//__HAL_TIM_ENABLE(&htim5);
+
 	HAL_TIM_Base_Init(vgaPixelTimer);
 	HAL_TIM_Base_Start_IT(vgaPixelTimer);
 	HAL_TIM_PWM_Start(vgaPixelTimer, TIM_CHANNEL_2);
@@ -482,13 +503,14 @@ void vgaStart(){
 	//prepare the buffer with the first two lines
 	//vgaStateMachine(1);
 	//vgaStateMachine(1);
+
 	//start the circular buffer dma transfer aka vga main loop
 	HAL_DMA_Start_IT(vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
-    __HAL_TIM_ENABLE_DMA(vgaCircularDMA, TIM_DMA_CC3);
-    //vgaCircularDMA->Instance->
-	//HAL_TIM_Base_Start_DMA(htim, pData, Length);
-	//HAL_TIMEx_PWMN_Start_DMA(htim, Channel, pData, Length);
-	//HAL_TIM_PWM_Start(htim, Channel);
+	__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_UPDATE);//transfer error
+    //__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_CC3);//no effect
+	//__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_TRIGGER);//no effect
+
+
 	//HAL_DMAEx_MultiBufferStart_IT(hdma, SrcAddress, DstAddress, SecondMemAddress, DataLength);
 }
 
