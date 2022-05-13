@@ -194,15 +194,14 @@ void vga_DMA_XFER_ALL_CB_ID(){
 
 
 
-void registerDebugInterupts(UART_HandleTypeDef * t_huartE){
-	huartE = t_huartE;
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_CPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vga_DMA_XFER_HALFCPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_M1CPLT_CB_ID, vga_DMA_XFER_M1CPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_M1HALFCPLT_CB_ID, vga_DMA_XFER_M1HALFCPLT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ERROR_CB_ID, vga_DMA_XFER_ERROR_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_ABORT_CB_ID);
-	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_ALL_CB_ID, vga_DMA_XFER_ALL_CB_ID);
+void registerDebugInterupts(DMA_HandleTypeDef * toDebug){
+	HAL_DMA_RegisterCallback(toDebug, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_CPLT_CB_ID);
+	HAL_DMA_RegisterCallback(toDebug, HAL_DMA_XFER_HALFCPLT_CB_ID, vga_DMA_XFER_HALFCPLT_CB_ID);
+	HAL_DMA_RegisterCallback(toDebug, HAL_DMA_XFER_M1CPLT_CB_ID, vga_DMA_XFER_M1CPLT_CB_ID);
+	HAL_DMA_RegisterCallback(toDebug, HAL_DMA_XFER_M1HALFCPLT_CB_ID, vga_DMA_XFER_M1HALFCPLT_CB_ID);
+	HAL_DMA_RegisterCallback(toDebug, HAL_DMA_XFER_ERROR_CB_ID, vga_DMA_XFER_ERROR_CB_ID);
+	HAL_DMA_RegisterCallback(toDebug, HAL_DMA_XFER_ABORT_CB_ID, vga_DMA_XFER_ABORT_CB_ID);
+	HAL_DMA_RegisterCallback(toDebug, HAL_DMA_XFER_ALL_CB_ID, vga_DMA_XFER_ALL_CB_ID);
 }
 
 void registerHUART(UART_HandleTypeDef * huart){
@@ -485,6 +484,12 @@ void vgaStart(){
 	//vgaStateMachine(1);
 	//start the circular buffer dma transfer aka vga main loop
 	HAL_DMA_Start_IT(vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
+    __HAL_TIM_ENABLE_DMA(vgaCircularDMA, TIM_DMA_CC3);
+    //vgaCircularDMA->Instance->
+	//HAL_TIM_Base_Start_DMA(htim, pData, Length);
+	//HAL_TIMEx_PWMN_Start_DMA(htim, Channel, pData, Length);
+	//HAL_TIM_PWM_Start(htim, Channel);
+	//HAL_DMAEx_MultiBufferStart_IT(hdma, SrcAddress, DstAddress, SecondMemAddress, DataLength);
 }
 
 void vgaStop(){

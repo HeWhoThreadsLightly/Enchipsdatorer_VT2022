@@ -176,6 +176,7 @@ int main(void)
 
 	vgaSetup(&htim5, &hdma_tim5_up, &hdma_memtomem_dma2_stream0);
 	registerHUART(&huart2);
+	registerDebugInterupts(&hdma_tim5_up);
 
 	for(int i = 0; i < vertRes; i++){//load a test pattern
 		for(int j = 0; j < horiRes; j++){

@@ -46,7 +46,7 @@ void setVblank(Color * c);
 HAL_StatusTypeDef old_memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
 HAL_StatusTypeDef old_memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength);
 
-void registerDebugInterupts(UART_HandleTypeDef * huart2);
+void registerDebugInterupts(DMA_HandleTypeDef * toDebug);
 void registerHUART(UART_HandleTypeDef * huart);
 
 void clearVisibleAria(Color * lineBuffPart);

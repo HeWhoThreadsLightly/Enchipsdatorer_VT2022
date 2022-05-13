@@ -4,9 +4,9 @@
 ../Core/Src/main.c:93:5:printStatus	16	static
 ../Core/Src/main.c:114:5:printState	16	static
 ../Core/Src/main.c:142:5:main	104	static
-../Core/Src/main.c:243:6:SystemClock_Config	88	static
-../Core/Src/main.c:290:13:MX_TIM5_Init	64	static
-../Core/Src/main.c:349:13:MX_USART2_UART_Init	8	static
-../Core/Src/main.c:382:13:MX_DMA_Init	16	static
-../Core/Src/main.c:423:13:MX_GPIO_Init	48	static
-../Core/Src/main.c:478:6:Error_Handler	4	static,ignoring_inline_asm
+../Core/Src/main.c:244:6:SystemClock_Config	88	static
+../Core/Src/main.c:291:13:MX_TIM5_Init	64	static
+../Core/Src/main.c:350:13:MX_USART2_UART_Init	8	static
+../Core/Src/main.c:383:13:MX_DMA_Init	16	static
+../Core/Src/main.c:424:13:MX_GPIO_Init	48	static
+../Core/Src/main.c:479:6:Error_Handler	4	static,ignoring_inline_asm
