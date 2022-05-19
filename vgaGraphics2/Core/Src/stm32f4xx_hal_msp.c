@@ -107,13 +107,10 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     hdma_tim5_up.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_tim5_up.Init.MemInc = DMA_MINC_ENABLE;
     hdma_tim5_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_tim5_up.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim5_up.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_tim5_up.Init.Mode = DMA_CIRCULAR;
     hdma_tim5_up.Init.Priority = DMA_PRIORITY_HIGH;
-    hdma_tim5_up.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    hdma_tim5_up.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
-    hdma_tim5_up.Init.MemBurst = DMA_MBURST_SINGLE;
-    hdma_tim5_up.Init.PeriphBurst = DMA_PBURST_SINGLE;
+    hdma_tim5_up.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_tim5_up) != HAL_OK)
     {
       Error_Handler();
@@ -128,13 +125,10 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     hdma_tim5_ch2.Init.PeriphInc = DMA_PINC_DISABLE;
     hdma_tim5_ch2.Init.MemInc = DMA_MINC_ENABLE;
     hdma_tim5_ch2.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
-    hdma_tim5_ch2.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
+    hdma_tim5_ch2.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_tim5_ch2.Init.Mode = DMA_CIRCULAR;
     hdma_tim5_ch2.Init.Priority = DMA_PRIORITY_HIGH;
-    hdma_tim5_ch2.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
-    hdma_tim5_ch2.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
-    hdma_tim5_ch2.Init.MemBurst = DMA_MBURST_SINGLE;
-    hdma_tim5_ch2.Init.PeriphBurst = DMA_PBURST_SINGLE;
+    hdma_tim5_ch2.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
     if (HAL_DMA_Init(&hdma_tim5_ch2) != HAL_OK)
     {
       Error_Handler();
