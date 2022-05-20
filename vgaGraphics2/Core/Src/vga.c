@@ -486,18 +486,22 @@ void vgaSetup(
 	state = sSetVsync1P1;
 	activeBuffer = lineBuff;
 	oldBuffer = &lineBuff[horiWhole];
+
 }
 
 void vgaStart(){
+	HAL_TIM_PWM_Start(vgaPixelTimer, TIM_DMA_UPDATE);
+	__HAL_TIM_ENABLE(vgaPixelTimer);
+
 	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaHalfCallBack);
 	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
 	HAL_DMA_RegisterCallback(memCopyDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaCopyAndSetCallBack);
+
 	HAL_DMA_Init(vgaCircularDMA);
 	//__HAL_TIM_ENABLE(&htim5);
 
-	HAL_TIM_Base_Init(vgaPixelTimer);
+	//HAL_TIM_Base_Init(vgaPixelTimer);
 	HAL_TIM_Base_Start_IT(vgaPixelTimer);
-	HAL_TIM_PWM_Start(vgaPixelTimer, TIM_CHANNEL_2);
 	//HAL_TIM_Base_Start_DMA(htim, pData, Length);//used to load the timer with new times each time it triggers not our usecase
 
 	//prepare the buffer with the first two lines
@@ -506,7 +510,7 @@ void vgaStart(){
 
 	//start the circular buffer dma transfer aka vga main loop
 	HAL_DMA_Start_IT(vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
-	__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_UPDATE);//transfer error
+	//__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_UPDATE);//transfer error
     //__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_CC3);//no effect
 	//__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_TRIGGER);//no effect
 
