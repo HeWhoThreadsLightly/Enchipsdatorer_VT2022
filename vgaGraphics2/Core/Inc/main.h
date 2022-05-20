@@ -69,7 +69,7 @@ void Error_Handler(void);
 #define vgaPin2_B2_GPIO_Port GPIOC
 #define vgaPin3_B3_Pin GPIO_PIN_3
 #define vgaPin3_B3_GPIO_Port GPIOC
-#define vgaPin13_Vsync_Pin GPIO_PIN_0
+#define vgaPin13_Vsync_Pin GPIO_PIN_1
 #define vgaPin13_Vsync_GPIO_Port GPIOA
 #define USART_TX_Pin GPIO_PIN_2
 #define USART_TX_GPIO_Port GPIOA

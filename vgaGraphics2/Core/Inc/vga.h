@@ -53,7 +53,12 @@ void clearVisibleAria(Color * lineBuffPart);
 void setVerticalSync(Color * lineBuffPart);
 void setHorizontalSync(Color * lineBuffPart);
 
-void vgaSetup();
+void vgaSetup(
+		TIM_HandleTypeDef * vgaPixelTimer_,
+		DMA_HandleTypeDef * vgaCircularDMA_,
+		DMA_HandleTypeDef * memCopyDMA_,
+		GPIO_TypeDef* Vsync_GPIO_Port_,
+		uint16_t Vsync_Pin_);
 void vgaStart();
 void vgaStop();
 
