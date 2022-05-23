@@ -44,7 +44,6 @@
  TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim5;
 DMA_HandleTypeDef hdma_tim1_up;
-DMA_HandleTypeDef hdma_tim5_up;
 
 UART_HandleTypeDef huart2;
 
@@ -86,7 +85,15 @@ void timerReset(){
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, sizeof(str), HAL_MAX_DELAY);
 }
 
+int lastLine = -100;
+uint32_t profileCount = 0;
 void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
+	if(htim == &htim5){
+		str_len = sprintf(str, "Profile %8lu ticks clock\t line %i\r\n", profileCount, lineCount);
+		HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+		profileCount = 0;
+	}
+	return;
 	if(htim == &htim5){
 		timerReset();
 	}else if(htim == &htim1){
@@ -180,12 +187,17 @@ int main(void)
 
 	for(int i = 0; i < vertRes; i++){//load a test pattern
 		for(int j = 0; j < horiRes; j++){
-			if(j % 2 == 0 && i%2 == 0){
-				setRGB(&(screenBuff[i*vertRes + j]), 0b11, 0b11, 0b11);
-			}else{
-				setRGB(&(screenBuff[i*vertRes + j]), 0b00, 0b00, 0b00);
-			}
+			screenBuff[i*vertRes + j].value = 0b00111111;
 			//screenBuff[i*vertRes + j].value = j & 0b111111;
+		}
+		for(int j = 0; j<16;j++){
+			screenBuff[i*vertRes + 8 + j].value = 0b00111000 + j%8;
+		}
+	}
+
+	for(int i = 0; i < vertRes; i++){//load a clear test pattern
+		for(int j = 0; j < horiRes; j++){
+			screenBuff[i*vertRes + j].value = 0;
 		}
 	}
 
@@ -196,10 +208,11 @@ int main(void)
 	registerDebugInterupts(&hdma_tim1_up);
 
 
+	//HAL_TIM_Base_Start_IT(&htim5);
 
 	dumpLine();
 	printState(HAL_DMA_GetState(&hdma_memtomem_dma2_stream0));
-	//*
+	/*
 	str_len = sprintf(str, "\r\n\r\nTesting Memset\r\n");
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
 
@@ -238,15 +251,10 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
-	int lastLine = -100;
 	while (1)
 	{
-		HAL_Delay(100);
-		if(0 && lastLine != lineCount){
-			lastLine = lineCount;
-			str_len = sprintf(str, "Line %i\r\n", lineCount);
-			HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-		}
+		profileCount++;
+		//HAL_Delay(1);
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
@@ -276,8 +284,8 @@ void SystemClock_Config(void)
   RCC_OscInitStruct.HSICalibrationValue = RCC_HSICALIBRATION_DEFAULT;
   RCC_OscInitStruct.PLL.PLLState = RCC_PLL_ON;
   RCC_OscInitStruct.PLL.PLLSource = RCC_PLLSOURCE_HSI;
-  RCC_OscInitStruct.PLL.PLLM = 16;
-  RCC_OscInitStruct.PLL.PLLN = 336;
+  RCC_OscInitStruct.PLL.PLLM = 8;
+  RCC_OscInitStruct.PLL.PLLN = 151;
   RCC_OscInitStruct.PLL.PLLP = RCC_PLLP_DIV4;
   RCC_OscInitStruct.PLL.PLLQ = 7;
   if (HAL_RCC_OscConfig(&RCC_OscInitStruct) != HAL_OK)
@@ -321,9 +329,9 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 84;
+  htim1.Init.Prescaler = 200-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim1.Init.Period = 500;
+  htim1.Init.Period = 3-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim1.Init.RepetitionCounter = 0;
   htim1.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
@@ -347,7 +355,7 @@ static void MX_TIM1_Init(void)
     Error_Handler();
   }
   sConfigOC.OCMode = TIM_OCMODE_PWM1;
-  sConfigOC.Pulse = 50;
+  sConfigOC.Pulse = 2;
   sConfigOC.OCPolarity = TIM_OCPOLARITY_HIGH;
   sConfigOC.OCNPolarity = TIM_OCNPOLARITY_HIGH;
   sConfigOC.OCFastMode = TIM_OCFAST_DISABLE;
@@ -394,9 +402,9 @@ static void MX_TIM5_Init(void)
 
   /* USER CODE END TIM5_Init 1 */
   htim5.Instance = TIM5;
-  htim5.Init.Prescaler = 8400;
+  htim5.Init.Prescaler = 7550-1;
   htim5.Init.CounterMode = TIM_COUNTERMODE_UP;
-  htim5.Init.Period = 100;
+  htim5.Init.Period = 10000-1;
   htim5.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
   htim5.Init.AutoReloadPreload = TIM_AUTORELOAD_PRELOAD_ENABLE;
   if (HAL_TIM_Base_Init(&htim5) != HAL_OK)
@@ -462,7 +470,6 @@ static void MX_DMA_Init(void)
 {
 
   /* DMA controller clock enable */
-  __HAL_RCC_DMA1_CLK_ENABLE();
   __HAL_RCC_DMA2_CLK_ENABLE();
 
   /* Configure DMA request hdma_memtomem_dma2_stream0 on DMA2_Stream0 */
@@ -485,9 +492,6 @@ static void MX_DMA_Init(void)
   }
 
   /* DMA interrupt init */
-  /* DMA1_Stream6_IRQn interrupt configuration */
-  HAL_NVIC_SetPriority(DMA1_Stream6_IRQn, 0, 0);
-  HAL_NVIC_EnableIRQ(DMA1_Stream6_IRQn);
   /* DMA2_Stream5_IRQn interrupt configuration */
   HAL_NVIC_SetPriority(DMA2_Stream5_IRQn, 0, 0);
   HAL_NVIC_EnableIRQ(DMA2_Stream5_IRQn);

@@ -25,8 +25,6 @@
 /* USER CODE END Includes */
 extern DMA_HandleTypeDef hdma_tim1_up;
 
-extern DMA_HandleTypeDef hdma_tim5_up;
-
 /* Private typedef -----------------------------------------------------------*/
 /* USER CODE BEGIN TD */
 
@@ -109,7 +107,7 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
     hdma_tim1_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_BYTE;
     hdma_tim1_up.Init.MemDataAlignment = DMA_MDATAALIGN_BYTE;
     hdma_tim1_up.Init.Mode = DMA_CIRCULAR;
-    hdma_tim1_up.Init.Priority = DMA_PRIORITY_LOW;
+    hdma_tim1_up.Init.Priority = DMA_PRIORITY_VERY_HIGH;
     hdma_tim1_up.Init.FIFOMode = DMA_FIFOMODE_ENABLE;
     hdma_tim1_up.Init.FIFOThreshold = DMA_FIFO_THRESHOLD_HALFFULL;
     hdma_tim1_up.Init.MemBurst = DMA_MBURST_INC4;
@@ -132,26 +130,9 @@ void HAL_TIM_Base_MspInit(TIM_HandleTypeDef* htim_base)
   /* USER CODE END TIM5_MspInit 0 */
     /* Peripheral clock enable */
     __HAL_RCC_TIM5_CLK_ENABLE();
-
-    /* TIM5 DMA Init */
-    /* TIM5_UP Init */
-    hdma_tim5_up.Instance = DMA1_Stream6;
-    hdma_tim5_up.Init.Channel = DMA_CHANNEL_6;
-    hdma_tim5_up.Init.Direction = DMA_MEMORY_TO_PERIPH;
-    hdma_tim5_up.Init.PeriphInc = DMA_PINC_DISABLE;
-    hdma_tim5_up.Init.MemInc = DMA_MINC_ENABLE;
-    hdma_tim5_up.Init.PeriphDataAlignment = DMA_PDATAALIGN_WORD;
-    hdma_tim5_up.Init.MemDataAlignment = DMA_MDATAALIGN_WORD;
-    hdma_tim5_up.Init.Mode = DMA_CIRCULAR;
-    hdma_tim5_up.Init.Priority = DMA_PRIORITY_LOW;
-    hdma_tim5_up.Init.FIFOMode = DMA_FIFOMODE_DISABLE;
-    if (HAL_DMA_Init(&hdma_tim5_up) != HAL_OK)
-    {
-      Error_Handler();
-    }
-
-    __HAL_LINKDMA(htim_base,hdma[TIM_DMA_ID_UPDATE],hdma_tim5_up);
-
+    /* TIM5 interrupt Init */
+    HAL_NVIC_SetPriority(TIM5_IRQn, 0, 1);
+    HAL_NVIC_EnableIRQ(TIM5_IRQn);
   /* USER CODE BEGIN TIM5_MspInit 1 */
 
   /* USER CODE END TIM5_MspInit 1 */
@@ -175,7 +156,7 @@ void HAL_TIM_MspPostInit(TIM_HandleTypeDef* htim)
     GPIO_InitStruct.Pin = GPIO_PIN_8;
     GPIO_InitStruct.Mode = GPIO_MODE_AF_PP;
     GPIO_InitStruct.Pull = GPIO_NOPULL;
-    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_LOW;
+    GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
     GPIO_InitStruct.Alternate = GPIO_AF1_TIM1;
     HAL_GPIO_Init(GPIOA, &GPIO_InitStruct);
 
@@ -215,8 +196,8 @@ void HAL_TIM_Base_MspDeInit(TIM_HandleTypeDef* htim_base)
     /* Peripheral clock disable */
     __HAL_RCC_TIM5_CLK_DISABLE();
 
-    /* TIM5 DMA DeInit */
-    HAL_DMA_DeInit(htim_base->hdma[TIM_DMA_ID_UPDATE]);
+    /* TIM5 interrupt DeInit */
+    HAL_NVIC_DisableIRQ(TIM5_IRQn);
   /* USER CODE BEGIN TIM5_MspDeInit 1 */
 
   /* USER CODE END TIM5_MspDeInit 1 */

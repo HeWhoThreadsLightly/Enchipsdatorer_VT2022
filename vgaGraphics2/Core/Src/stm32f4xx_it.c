@@ -56,7 +56,7 @@
 
 /* External variables --------------------------------------------------------*/
 extern DMA_HandleTypeDef hdma_tim1_up;
-extern DMA_HandleTypeDef hdma_tim5_up;
+extern TIM_HandleTypeDef htim5;
 /* USER CODE BEGIN EV */
 
 /* USER CODE END EV */
@@ -200,17 +200,17 @@ void SysTick_Handler(void)
 /******************************************************************************/
 
 /**
-  * @brief This function handles DMA1 stream6 global interrupt.
+  * @brief This function handles TIM5 global interrupt.
   */
-void DMA1_Stream6_IRQHandler(void)
+void TIM5_IRQHandler(void)
 {
-  /* USER CODE BEGIN DMA1_Stream6_IRQn 0 */
+  /* USER CODE BEGIN TIM5_IRQn 0 */
 
-  /* USER CODE END DMA1_Stream6_IRQn 0 */
-  HAL_DMA_IRQHandler(&hdma_tim5_up);
-  /* USER CODE BEGIN DMA1_Stream6_IRQn 1 */
+  /* USER CODE END TIM5_IRQn 0 */
+  HAL_TIM_IRQHandler(&htim5);
+  /* USER CODE BEGIN TIM5_IRQn 1 */
 
-  /* USER CODE END DMA1_Stream6_IRQn 1 */
+  /* USER CODE END TIM5_IRQn 1 */
 }
 
 /**

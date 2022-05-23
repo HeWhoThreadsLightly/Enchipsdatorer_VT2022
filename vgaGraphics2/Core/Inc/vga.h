@@ -53,6 +53,7 @@ void clearVisibleAria(Color * lineBuffPart);
 void setVerticalSync(Color * lineBuffPart);
 void setHorizontalSync(Color * lineBuffPart);
 
+void vgaLoop();
 void vgaSetup(
 		TIM_HandleTypeDef * vgaPixelTimer_,
 		DMA_HandleTypeDef * vgaCircularDMA_,
