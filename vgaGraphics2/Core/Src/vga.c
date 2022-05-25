@@ -19,6 +19,10 @@ Screen refresh rate	70 Hz
 Vertical refresh	31.46875 kHz/4/1.2
 Pixel freq.	25.175 MHz
 
+hclock 75.5 Mhz / 3 = 25.1666667 megahertz
+/ vga upscale
+
+
 Horizontal timing (line)
 Polarity of horizontal sync pulse is negative.
 Scanline part	Pixels	/4	Time [µs]
@@ -56,6 +60,9 @@ enum { vertWhole = 449};
 //main buffers
 _Alignas(uint32_t) Color lineBuff[horiWhole*2] = {0};//double  buffered
 _Alignas(uint32_t) Color screenBuff[horiRes*vertRes] = {0};//rows*columns
+
+//_Alignas(uint32_t) Color lineBuff[800] = {0};//double  buffered
+//_Alignas(uint32_t) Color screenBuff[64000] = {0};//rows*columns
 //todo remove and replace with a setCharAtXY function
 
 //hardware interfaces
@@ -85,10 +92,10 @@ void checkAsserts(){//check memory layout assumptions
 
 	//checks that 32 bit mode works for all subsets of the line buffer
 	_Static_assert(horiRes % sizeof(uint32_t) == 0, "Horizontal area is not 32 bit aligned");
-	_Static_assert(horiFront % sizeof(uint32_t) == 0, "Horizontal front is not 32 bit aligned");
-	_Static_assert(horiSync % sizeof(uint32_t) == 0, "Horizontal sync is not 32 bit aligned");
-	_Static_assert(horiBack % sizeof(uint32_t) == 0, "Horizontal back is not 32 bit aligned");
-	_Static_assert(horiWhole % sizeof(uint32_t) == 0, "Horizontal whole line is not 32 bit aligned");
+	//_Static_assert(horiFront % sizeof(uint32_t) == 0, "Horizontal front is not 32 bit aligned");
+	//_Static_assert(horiSync % sizeof(uint32_t) == 0, "Horizontal sync is not 32 bit aligned");
+	//_Static_assert(horiBack % sizeof(uint32_t) == 0, "Horizontal back is not 32 bit aligned");
+	//_Static_assert(horiWhole % sizeof(uint32_t) == 0, "Horizontal whole line is not 32 bit aligned");
 
 	_Static_assert(horiWhole == horiRes+horiFront+horiSync+horiBack, "Horizontal vga configuration does not sum up");
 	_Static_assert(vertWhole == vertArea+vertFront+vertSync+vertBack, "Vertical vga configuration does not sum up");
@@ -510,31 +517,45 @@ void vgaStateMachine(int activatedFromCircularBuffer){
 	}
 }
 
-char strDumpBuff[1200];
-void dumpBuffer(Color * activeBuffer){
+char strDumpBuff[1000];
+void dumpBuffer(char * dump, uint32_t bytes, uint32_t * indicatorLength, char * indicator, uint32_t columnSets){
 	char * str = strDumpBuff;
-	uint32_t columnSets = 2;
-
-	str += sprintf(str, "Line %i\n\r", lineCount);
-	str += sprintf(str, "    ");
+	uint32_t nextIndicator;
+	if(indicatorLength != NULL){
+		nextIndicator = *indicatorLength;
+	}
+	str += sprintf(str, "      ");
 	for(uint32_t i = 0; i < columnSets; i++){
-		str += sprintf(str, "0  1  2  3  4  5  6  7  8  9  a  b  c  d  e  f   ");
+		str += sprintf(str, "0   1   2   3   4   5   6   7   8   9   a   b   c   d   e   f    ");
 	}
 	str += sprintf(str, "\n\r");
-	for(uint32_t i = 0; i < horiWhole;){
+	for(uint32_t i = 0; i < bytes;){
 
-		str += sprintf(str, "%3lx ", i / (16*columnSets));
+		str += sprintf(str, "%3lx ", i / (16));
 		for(uint32_t columnSetI = 0; columnSetI < columnSets; columnSetI++){
-			for(uint32_t j = i+16; i<j && i < horiWhole; i++){
-				uint32_t tmp = activeBuffer[i].value;
-				str += sprintf(str, "%02lx ", tmp);
+			for(uint32_t j = i+16; i<j && i < bytes; i++){
+				uint32_t tmp = dump[i];
+				if(indicatorLength == NULL){
+					str += sprintf(str, " %02lx ", tmp);
+				}else{
+					if(i == nextIndicator){
+						indicatorLength++;
+						nextIndicator += *indicatorLength;
+						indicator++;
+						indicator++;
+					}
+					str += sprintf(str, "%c%02lx%c", *indicator, tmp, *(indicator+1));
+				}
 			}
 			str += sprintf(str, "  ");
+			if(str - strDumpBuff > sizeof(strDumpBuff)/2){
+				HAL_UART_Transmit(huartE, (uint8_t*) strDumpBuff, str - strDumpBuff, HAL_MAX_DELAY);
+				str = strDumpBuff;
+			}
 		}
 		str += sprintf(str, "\n\r");
 	}
 	str += sprintf(str, "\n\r");
-	str += sprintf(str, "                                            ");
 	//str += sprintf(str, "\0");
 	HAL_UART_Transmit(huartE, (uint8_t*) strDumpBuff, str - strDumpBuff, HAL_MAX_DELAY);
 }
@@ -567,14 +588,14 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 		//renderLine(activeBuffer, lineCount);
 		//while(HAL_DMA_PollForTransfer(memCopyDMA, HAL_DMA_FULL_TRANSFER, 100)){HAL_Delay(1);};
 		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
-		uint32_t * screen32 = (uint32_t*)&screenBuff[lineCount*vertRes];
+		uint32_t * screen32 = (uint32_t*)&screenBuff[(lineCount/vgaUpscale)*horiRes];
 		for(uint32_t i = 0; i < horiRes/4;i++){
 			*active32 = *screen32;
+			//*active32 = 0x77777777;
 			++active32;
 			++screen32;
 			//activeBuffer[i] = screenBuff[lineCount*vertRes + i];
 		}
-
 	}else if(lineCount == vertArea){//last line clear
 #ifdef vgaDebug
 		ref_str = "clear line";
@@ -582,6 +603,7 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
 		for(uint32_t i = 0; i < horiRes/4; i++){
 			*active32 = 0;
+			active32++;
 		}
 	}else if(lineCount == vertArea + 1){//last line clear buffer
 #ifdef vgaDebug
@@ -590,6 +612,7 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
 		for(uint32_t i = 0; i < horiRes/4; i++){
 			*active32 = 0;
+			active32++;
 		}
 	}else if(lineCount == vertArea + vertFront){//enter vertical sync todo check for of by one error
 #ifdef vgaDebug
@@ -609,10 +632,12 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 #endif
 		lineCount = -1;
 	}
-	//dumpBuffer(activeBuffer);
+
 #ifdef vgaDebug
-	str_len = sprintf(str, "Line %i\t %s \t", lineCount, ref_str);
+	str_len = sprintf(str, "Line %i\t %s \n\r", lineCount, ref_str);
 	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+	uint32_t indicatorLengths[] = {horiFront, horiSync, horiBack, horiRes, horiFront, horiSync, horiBack, horiRes};
+	dumpBuffer((char*)lineBuff, horiWhole*2, indicatorLengths, "  []  ||  []  ||EE", 2);
 #endif
 }
 
@@ -697,6 +722,8 @@ void vgaSetup(
 
 
 void vgaStart(){
+
+	dumpBuffer((char*)screenBuff, horiRes*vertRes, NULL, "", 2);
 	//HAL_DMA_Init(vgaCircularDMA);
 	__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_UPDATE);
 	__HAL_TIM_ENABLE(vgaPixelTimer);

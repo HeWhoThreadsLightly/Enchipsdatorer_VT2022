@@ -81,7 +81,7 @@ void dumpLine(){
 }
 
 void timerReset(){
-	char str[] = "Timer reset\n\r";
+char str[] = "Timer reset\n\r";
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, sizeof(str), HAL_MAX_DELAY);
 }
 
@@ -187,17 +187,17 @@ int main(void)
 
 	for(int i = 0; i < vertRes; i++){//load a test pattern
 		for(int j = 0; j < horiRes; j++){
-			screenBuff[i*vertRes + j].value = 0b00111111;
+			screenBuff[i*horiRes + j].value = 0b00111111;
 			//screenBuff[i*vertRes + j].value = j & 0b111111;
 		}
 		for(int j = 0; j<16;j++){
-			screenBuff[i*vertRes + 8 + j].value = 0b00111000 + j%8;
+			screenBuff[i*horiRes + 8 + j].value = 0b00110000 + j%16;
 		}
 	}
 
 	for(int i = 0; i < vertRes; i++){//load a clear test pattern
 		for(int j = 0; j < horiRes; j++){
-			screenBuff[i*vertRes + j].value = 0;
+			//screenBuff[i*horiRes + j].value = 0;
 		}
 	}
 
@@ -329,7 +329,7 @@ static void MX_TIM1_Init(void)
 
   /* USER CODE END TIM1_Init 1 */
   htim1.Instance = TIM1;
-  htim1.Init.Prescaler = 200-1;
+  htim1.Init.Prescaler = vgaUpscale-1;
   htim1.Init.CounterMode = TIM_COUNTERMODE_UP;
   htim1.Init.Period = 3-1;
   htim1.Init.ClockDivision = TIM_CLOCKDIVISION_DIV1;
@@ -538,7 +538,7 @@ static void MX_GPIO_Init(void)
                           |vgaPin12_Hsync_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : vgaPin13_Vsync_Pin */
