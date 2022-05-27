@@ -190,8 +190,8 @@ int main(void)
 			screenBuff[i*horiRes + j].value = 0b00111111;
 			//screenBuff[i*vertRes + j].value = j & 0b111111;
 		}
-		for(int j = 0; j<16;j++){
-			screenBuff[i*horiRes + 8 + j].value = 0b00110000 + j%16;
+		for(int j = 0; j<64;j++){
+			screenBuff[i*horiRes + 8 + j].value = 0b00000000 + j%64;// + ((j%4)<<2) + ((j%4)<<4);
 		}
 	}
 
@@ -538,7 +538,7 @@ static void MX_GPIO_Init(void)
                           |vgaPin12_Hsync_Pin;
   GPIO_InitStruct.Mode = GPIO_MODE_OUTPUT_PP;
   GPIO_InitStruct.Pull = GPIO_NOPULL;
-  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_MEDIUM;
+  GPIO_InitStruct.Speed = GPIO_SPEED_FREQ_VERY_HIGH;
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /*Configure GPIO pin : vgaPin13_Vsync_Pin */
