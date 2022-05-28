@@ -9,9 +9,13 @@ import math
 helpMessage = '''
     immageConverter.py -f <filename> -h <sprite horizontal px> -v <sprite vertical px>
         -s save sprites
+        -r revers bit order
     example: immageConverter.py -f Codepage-437.bmp -h 9 -v 16
     immageConverter.py --help for this message
 '''
+
+def reverseByte(b):
+    return ((b&1 << 7) | (b&2 << 5) | (b&4 << 3) | (b&8 << 1) |(b&16 >> 1) | (b&32 >> 3) | (b&64 >> 5) | (b&128 >> 7))
 
 def main(argv):
     file = ""
@@ -19,10 +23,11 @@ def main(argv):
     vpx = -1
     charOnline = 40
     saveSprites = 0
+    reversBitOrder = 1
     #read comand line arguments
-    #-f Codepage-437.bmp -h 9 -v 16 -s
+    #-f Codepage-437.bmp -h 9 -v 16 -s -r
     try:
-        opts, arg = getopt.getopt(argv, "sf:h:v:",["help"])
+        opts, arg = getopt.getopt(argv, "srf:h:v:",["help"])
     except getopt.GetoptError:
         print("error reading arguments")
         print(helpMessage)
@@ -40,6 +45,8 @@ def main(argv):
             vpx = int(arg)
         elif opt == '-s':
             saveSprites = 1
+        elif opt == '-r':
+            reversBitOrder = -1
     if file == "" or hpx == -1 or vpx == -1:
         print("error interpreting arguments")
         print(file, hpx, vpx)
@@ -100,14 +107,15 @@ def main(argv):
     #convert bit array to a byte array
     bytearr = np.packbits(np.uint8(arr.flatten()))
     s = ""
+    
     for b in bytearr[0:-1]:#print all bytes exept the last
-        s += '{:#010b}, '.format(b)
+        s += "0b" + '{:08b}'.format(b)[::reversBitOrder] + ", "
         if len(s) > charOnline:
             outc.write("\t" + s + "\n")
             s = ""
 
     if len(bytearr) != 0:#print the last byte in the array with termination
-        s += '{:#010b}'.format(bytearr[-1])
+        s += "0b" + '{:08b}'.format(bytearr[-1])[::reversBitOrder]
         outc.write("\t" + s + "};\n\n")
     outc.close()
 

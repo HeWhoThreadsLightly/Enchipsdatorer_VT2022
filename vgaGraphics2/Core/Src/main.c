@@ -26,12 +26,6 @@
 #include <stdio.h>
 #include "dmaDebug.h"
 #include "graphicsLib.h"
-void setRed(Color * c, char r);
-void setGreen(Color * c, char g);
-void setBlue(Color * c, char b);
-void setRGB(Color * c, char r, char g, char b);
-void setHblank(Color * c);
-void setVblank(Color * c);
 
 /* USER CODE END Includes */
 
@@ -143,17 +137,17 @@ int main(void)
 
 	for(int i = 0; i < vertRes; i++){//load a test pattern
 		for(int j = 0; j < horiRes; j++){
-			screenBuff[i*vertRes + j].value = 0b00111111;
+			screenBuff[i*horiRes + j].value = 0b00111111;
 			//screenBuff[i*vertRes + j].value = j & 0b111111;
 		}
-		for(int j = 0; j<16;j++){
-			screenBuff[i*vertRes + 8 + j].value = 0b00111000 + j%8;
+		for(int j = 0; j<64;j++){
+			screenBuff[i*horiRes + 8 + j].value = 0b00000000 + j;
 		}
 	}
 
 	for(int i = 0; i < vertRes; i++){//load a clear test pattern
 		for(int j = 0; j < horiRes; j++){
-			screenBuff[i*vertRes + j].value = 0;
+			//screenBuff[i*horiRes + j].value = 0;
 		}
 	}
 

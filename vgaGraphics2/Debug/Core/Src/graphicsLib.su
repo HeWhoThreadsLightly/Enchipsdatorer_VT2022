@@ -6,5 +6,5 @@
 ../Core/Src/graphicsLib.c:28:6:setVblank	16	static
 ../Core/Src/graphicsLib.c:32:5:getBitN	16	static
 ../Core/Src/graphicsLib.c:36:7:combineColors	24	static
-../Core/Src/graphicsLib.c:51:6:renderChar	56	static
-../Core/Src/graphicsLib.c:78:6:renderString	32	static
+../Core/Src/graphicsLib.c:54:6:renderChar	56	static
+../Core/Src/graphicsLib.c:85:6:renderString	32	static

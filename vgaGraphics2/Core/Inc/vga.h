@@ -14,7 +14,7 @@ typedef struct {
 	char value;
 }Color;
 
-enum { vgaUpscale = 4 };
+//enum { vgaUpscale = 4 };
 enum { horiRes = 640/vgaUpscale};
 enum { vertRes = 400/vgaUpscale};
 
