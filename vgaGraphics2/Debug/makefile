@@ -10,6 +10,7 @@ RM := rm -rf
 # All of the sources participating in the build are defined here
 -include sources.mk
 -include Drivers/STM32F4xx_HAL_Driver/Src/subdir.mk
+-include Core/oldCode/subdir.mk
 -include Core/Startup/subdir.mk
 -include Core/Src/subdir.mk
 -include objects.mk
@@ -60,8 +61,8 @@ all: main-build
 main-build: vgaGraphics2.elf secondary-outputs
 
 # Tool invocations
-vgaGraphics2.elf vgaGraphics2.map: $(OBJS) $(USER_OBJS) C:\Users\Privat\Documents\git\Enchipsdatorer_VT2022\vgaGraphics2\STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
-	arm-none-eabi-gcc -o "vgaGraphics2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Privat\Documents\git\Enchipsdatorer_VT2022\vgaGraphics2\STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="vgaGraphics2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
+vgaGraphics2.elf vgaGraphics2.map: $(OBJS) $(USER_OBJS) C:\Users\Orion\Documents\git\Enchipsdatorer_VT2022\vgaGraphics2\STM32F401RETX_FLASH.ld makefile objects.list $(OPTIONAL_TOOL_DEPS)
+	arm-none-eabi-gcc -o "vgaGraphics2.elf" @"objects.list" $(USER_OBJS) $(LIBS) -mcpu=cortex-m4 -T"C:\Users\Orion\Documents\git\Enchipsdatorer_VT2022\vgaGraphics2\STM32F401RETX_FLASH.ld" --specs=nosys.specs -Wl,-Map="vgaGraphics2.map" -Wl,--gc-sections -static --specs=nano.specs -mfpu=fpv4-sp-d16 -mfloat-abi=hard -mthumb -Wl,--start-group -lc -lm -Wl,--end-group
 	@echo 'Finished building target: $@'
 	@echo ' '
 

@@ -14,7 +14,7 @@ typedef struct {
 	char value;
 }Color;
 
-enum { vgaUpscale = 2 };
+enum { vgaUpscale = 4 };
 enum { horiRes = 640/vgaUpscale};
 enum { vertRes = 400/vgaUpscale};
 
@@ -31,27 +31,11 @@ extern DMA_HandleTypeDef * memCopyDMA;
 extern int lineCount;//start right after a vertical sync
 extern int lineUpscale;//copy old buffer if non zero
 extern int readyForNextLine;
+extern int vgaCantKeepUpp;
 extern Color * activeBuffer;
 extern Color * oldBuffer;
 
-void setRed(Color * c, char r);
-void setGreen(Color * c, char g);
-void setBlue(Color * c, char b);
-void setRGB(Color * c, char r, char g, char b);
-void setHblank(Color * c);
-void setVblank(Color * c);
-
-
-
-HAL_StatusTypeDef old_memCopy(uint32_t * SrcAddress, uint32_t * DstAddress, uint32_t DataLength);
-HAL_StatusTypeDef old_memSet(uint32_t value, uint32_t * DstAddress, uint32_t DataLength);
-
-void registerDebugInterupts(DMA_HandleTypeDef * toDebug);
-void registerHUART(UART_HandleTypeDef * huart);
-
-void clearVisibleAria(Color * lineBuffPart);
-void setVerticalSync(Color * lineBuffPart);
-void setHorizontalSync(Color * lineBuffPart);
+void registerHUARTvga(UART_HandleTypeDef * huart);
 
 void vgaLoop();
 void vgaSetup(
@@ -63,35 +47,4 @@ void vgaSetup(
 void vgaStart();
 void vgaStop();
 
-typedef enum {
-	sDecideNext,
-	sRenderLine,
-	sDoneRenderLine,
-	sCopyLastLine,
-	sDoneCopylastLine,
-
-	sExitVisible1,
-	sDoneExitVisible1,
-	sExitVisible2,
-	sDoneExitVisible2,
-
-	sSetVsync1P1,
-	sSetVsync1P2,
-	sDoneSetVsync1,
-	sSetVsync2P1,
-	sSetVsync2P2,
-	sDoneSetVsync2,
-
-	sSetHsync1P1,
-	sSetHsync1P2,
-	sDoneSetHsync1,
-	sSetHsync2P1,
-	sSetHsync2P2,
-	sDoneSetHsync2,
-
-	sEndBuffer,
-} vgaState;
-
-
-extern vgaState state;
 #endif /* INC_VGA_H_ */

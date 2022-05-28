@@ -1,0 +1,9 @@
+../Core/Src/dmaDebug.c:17:6:vga_DMA_XFER_CPLT_CB_ID	8	static
+../Core/Src/dmaDebug.c:23:6:vga_DMA_XFER_HALFCPLT_CB_ID	8	static
+../Core/Src/dmaDebug.c:29:6:vga_DMA_XFER_M1CPLT_CB_ID	8	static
+../Core/Src/dmaDebug.c:35:6:vga_DMA_XFER_M1HALFCPLT_CB_ID	8	static
+../Core/Src/dmaDebug.c:41:6:vga_DMA_XFER_ERROR_CB_ID	16	static
+../Core/Src/dmaDebug.c:67:6:vga_DMA_XFER_ABORT_CB_ID	8	static
+../Core/Src/dmaDebug.c:72:6:vga_DMA_XFER_ALL_CB_ID	8	static
+../Core/Src/dmaDebug.c:77:6:registerDebugInterupts	16	static
+../Core/Src/dmaDebug.c:88:6:registerHUARTdmaDebug	16	static

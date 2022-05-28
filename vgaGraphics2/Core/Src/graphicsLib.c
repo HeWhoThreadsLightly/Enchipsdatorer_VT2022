@@ -9,6 +9,26 @@
 #include "codepage-437-bmp.h"
 #include "vga.h"
 
+
+void setRed(Color * c, char r){
+	c->value = (c->value & 0b11001111) | r << 4;
+}
+void setGreen(Color * c, char g){
+	c->value = (c->value & 0b11110011) | g;
+}
+void setBlue(Color * c, char b){
+	c->value = (c->value & 0b11111100) | b;
+}
+void setRGB(Color * c, char r, char g, char b){
+	c->value = r << 4 | g << 2 | b;
+}
+void setHblank(Color * c){
+	c->value = 0b0100000;
+}
+void setVblank(Color * c){
+	c->value = 0b1000000;
+}
+
 int getBitN(uint32_t n, char * buff){
 	return (buff[n/8] >> (n%8)) & 0b1;
 }
@@ -62,4 +82,6 @@ void renderString(char * str, int h, int v, Color background, Color forground){
 		str++;
 	}
 }
+
+
 
