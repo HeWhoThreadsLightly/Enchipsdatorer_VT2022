@@ -23,6 +23,8 @@
 /* USER CODE BEGIN Includes */
 
 #include "vga.h"
+#include "graphicsLib.h"
+#include "codepage-437-bmp.h"
 #include <stdio.h>
 /* USER CODE END Includes */
 
@@ -200,7 +202,21 @@ int main(void)
 			//screenBuff[i*horiRes + j].value = 0;
 		}
 	}
-
+	//Write test text
+	Color black;
+	setRGB(&black, 00, 00, 00);
+	Color transparant;
+	transparant.value = 0b00101010;
+	//vgaUpscale;
+	int h = 10, w = 30, x = 64+8, y = 10;
+	for(int i = y; i < vertRes && i < y+h; i++){//load a clear test pattern
+		for(int j = x; j < horiRes && j < x+w; j++){
+			screenBuff[i*horiRes + j] = black;
+		}
+	}
+	y+=Codepage_437_char_hight;
+	//renderString(str, h, v, background, forground)
+	renderString("Hi", y, x, transparant, black);
 
 
 	vgaSetup(&htim1, &hdma_tim1_up, &hdma_memtomem_dma2_stream0, vgaPin13_Vsync_GPIO_Port, vgaPin13_Vsync_Pin);
