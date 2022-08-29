@@ -104,6 +104,8 @@ void Error_Handler(void);
 #define SWO_GPIO_Port GPIOB
 /* USER CODE BEGIN Private defines */
 
+extern UART_HandleTypeDef huart2;
+extern DMA_HandleTypeDef hdma_memtomem_dma2_stream0;
 /* USER CODE END Private defines */
 
 #ifdef __cplusplus

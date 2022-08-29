@@ -6,9 +6,9 @@
 # Add inputs and outputs from these tool invocations to the build variables 
 C_SRCS += \
 ../Core/Src/codepage-437-bmp.c \
+../Core/Src/dmaDebug.c \
 ../Core/Src/graphicsLib.c \
 ../Core/Src/main.c \
-../Core/Src/memFunc.c \
 ../Core/Src/stm32f4xx_hal_msp.c \
 ../Core/Src/stm32f4xx_it.c \
 ../Core/Src/syscalls.c \
@@ -18,9 +18,9 @@ C_SRCS += \
 
 OBJS += \
 ./Core/Src/codepage-437-bmp.o \
+./Core/Src/dmaDebug.o \
 ./Core/Src/graphicsLib.o \
 ./Core/Src/main.o \
-./Core/Src/memFunc.o \
 ./Core/Src/stm32f4xx_hal_msp.o \
 ./Core/Src/stm32f4xx_it.o \
 ./Core/Src/syscalls.o \
@@ -30,9 +30,9 @@ OBJS += \
 
 C_DEPS += \
 ./Core/Src/codepage-437-bmp.d \
+./Core/Src/dmaDebug.d \
 ./Core/Src/graphicsLib.d \
 ./Core/Src/main.d \
-./Core/Src/memFunc.d \
 ./Core/Src/stm32f4xx_hal_msp.d \
 ./Core/Src/stm32f4xx_it.d \
 ./Core/Src/syscalls.d \
@@ -48,7 +48,7 @@ Core/Src/%.o Core/Src/%.su: ../Core/Src/%.c Core/Src/subdir.mk
 clean: clean-Core-2f-Src
 
 clean-Core-2f-Src:
-	-$(RM) ./Core/Src/codepage-437-bmp.d ./Core/Src/codepage-437-bmp.o ./Core/Src/codepage-437-bmp.su ./Core/Src/graphicsLib.d ./Core/Src/graphicsLib.o ./Core/Src/graphicsLib.su ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/memFunc.d ./Core/Src/memFunc.o ./Core/Src/memFunc.su ./Core/Src/stm32f4xx_hal_msp.d ./Core/Src/stm32f4xx_hal_msp.o ./Core/Src/stm32f4xx_hal_msp.su ./Core/Src/stm32f4xx_it.d ./Core/Src/stm32f4xx_it.o ./Core/Src/stm32f4xx_it.su ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f4xx.d ./Core/Src/system_stm32f4xx.o ./Core/Src/system_stm32f4xx.su ./Core/Src/vga.d ./Core/Src/vga.o ./Core/Src/vga.su
+	-$(RM) ./Core/Src/codepage-437-bmp.d ./Core/Src/codepage-437-bmp.o ./Core/Src/codepage-437-bmp.su ./Core/Src/dmaDebug.d ./Core/Src/dmaDebug.o ./Core/Src/dmaDebug.su ./Core/Src/graphicsLib.d ./Core/Src/graphicsLib.o ./Core/Src/graphicsLib.su ./Core/Src/main.d ./Core/Src/main.o ./Core/Src/main.su ./Core/Src/stm32f4xx_hal_msp.d ./Core/Src/stm32f4xx_hal_msp.o ./Core/Src/stm32f4xx_hal_msp.su ./Core/Src/stm32f4xx_it.d ./Core/Src/stm32f4xx_it.o ./Core/Src/stm32f4xx_it.su ./Core/Src/syscalls.d ./Core/Src/syscalls.o ./Core/Src/syscalls.su ./Core/Src/sysmem.d ./Core/Src/sysmem.o ./Core/Src/sysmem.su ./Core/Src/system_stm32f4xx.d ./Core/Src/system_stm32f4xx.o ./Core/Src/system_stm32f4xx.su ./Core/Src/vga.d ./Core/Src/vga.o ./Core/Src/vga.su
 
 .PHONY: clean-Core-2f-Src
 

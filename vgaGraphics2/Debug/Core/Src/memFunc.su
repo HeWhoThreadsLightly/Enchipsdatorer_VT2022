@@ -1,7 +1,0 @@
-../Core/Src/memFunc.c:20:19:memCopy32	24	static
-../Core/Src/memFunc.c:39:19:memSet32	24	static
-../Core/Src/memFunc.c:50:10:roundUp	24	static
-../Core/Src/memFunc.c:59:10:roundDown	24	static
-../Core/Src/memFunc.c:77:21:splitPointers	56	static
-../Core/Src/memFunc.c:91:19:memCopy	80	static
-../Core/Src/memFunc.c:136:19:memSet	24	static

@@ -1,0 +1,9 @@
+../Core/oldCode/memFunc.c:21:19:old_memCopy	112	static
+../Core/oldCode/memFunc.c:43:19:old_memSet	112	static
+../Core/oldCode/memFunc.c:67:19:memCopy32	24	static
+../Core/oldCode/memFunc.c:86:19:memSet32	24	static
+../Core/oldCode/memFunc.c:97:10:roundUp	24	static
+../Core/oldCode/memFunc.c:106:10:roundDown	24	static
+../Core/oldCode/memFunc.c:124:21:splitPointers	56	static
+../Core/oldCode/memFunc.c:138:19:memCopy	80	static
+../Core/oldCode/memFunc.c:183:19:memSet	24	static
