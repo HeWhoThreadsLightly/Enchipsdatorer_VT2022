@@ -1,0 +1,24 @@
+VGA driver for STM32f401Xd/E
+
+###Todos
+Software:
+TODO ability to chane resolution at runtime
+TODO code cleenup lots of comented out code and owerwriting the render
+line function with your own beem racer is currently not suported,
+current versions screen buffer uses 69% of ram.
+TODO add suport for PS2 keeybord over serial
+TODO use USB otg to add usb drive suport (drivers?)
+TODO alternative micro sd cards?
+
+Hardware:
+TODO buffer rgb signals before R2R ladder to reduce jitter from polling
+other phereprials on the same bus.
+TODO change R2R ladders internal resistance to 75 ohms.
+TODO redo ground plane to reduce inteferance.
+TODO USB + PS2 suport
+
+Documentation
+TODO upload hardware scematics
+TODO document usage of vga driver, graphics library and font importing
+tool.
+
