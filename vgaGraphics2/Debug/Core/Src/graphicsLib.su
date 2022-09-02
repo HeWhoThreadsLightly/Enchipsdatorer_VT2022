@@ -8,3 +8,5 @@
 ../Core/Src/graphicsLib.c:36:7:combineColors	24	static
 ../Core/Src/graphicsLib.c:54:6:renderChar	56	static
 ../Core/Src/graphicsLib.c:85:6:renderString	32	static
+../Core/Src/graphicsLib.c:94:6:renderCharOnGrid	32	static
+../Core/Src/graphicsLib.c:98:6:renderStringOnGrid	32	static

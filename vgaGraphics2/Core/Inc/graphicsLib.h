@@ -30,4 +30,12 @@ typedef struct Sprite_map{
 	uint8_t data[];
 } Sprite_map;
 
+
+Color combineColors(Color existing, Color new);
+void renderChar(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font);
+void renderString(char * str, int h, int v, const Color background, const Color forground, const Sprite_map * font);
+
+void renderCharOnGrid(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font);
+void renderStringOnGrid(char * str, int h, int v, const Color background, const Color forground, const Sprite_map * font);
+
 #endif /* INC_GRAPHICSLIB_H_ */

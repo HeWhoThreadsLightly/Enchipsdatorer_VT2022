@@ -8,5 +8,5 @@
 ../Core/Src/vga.c:248:6:reportOVerspeed	96	static
 ../Core/Src/vga.c:254:6:vgaLoop	8	static
 ../Core/Src/vga.c:267:6:vgaSetup	40	static
-../Core/Src/vga.c:302:6:vgaStart	16	static
+../Core/Src/vga.c:302:6:vgaStart	8	static
 ../Core/Src/vga.c:322:6:vgaStop	4	static

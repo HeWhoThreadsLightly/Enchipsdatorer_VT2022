@@ -301,7 +301,7 @@ void vgaSetup(
 
 void vgaStart(){
 
-	dumpBuffer((char*)screenBuff, horiRes*vertRes, NULL, "", 2);
+	//dumpBuffer((char*)screenBuff, horiRes*vertRes, NULL, "", 2);
 	//HAL_DMA_Init(vgaCircularDMA);
 	__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_UPDATE);
 	__HAL_TIM_ENABLE(vgaPixelTimer);

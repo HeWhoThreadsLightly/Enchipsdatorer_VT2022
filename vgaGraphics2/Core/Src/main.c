@@ -71,17 +71,6 @@ static void MX_TIM1_Init(void);
 char str[81] = { '\0' };
 uint16_t str_len = 0;
 
-void dumpLine(){
-
-	for(int i = 0; i < 40; i++){
-		int tmp = screenBuff[i].value;
-		str_len = sprintf(str, "%02x ", tmp);
-		HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-	}
-	str_len = sprintf(str, "\r\n");
-	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-}
-
 void timerReset(){
 char str[] = "Timer reset\n\r";
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, sizeof(str), HAL_MAX_DELAY);
@@ -103,47 +92,121 @@ void HAL_TIM_PeriodElapsedCallback(TIM_HandleTypeDef *htim){
 	}
 }
 
-int printStatus(HAL_StatusTypeDef status){
-	/*
-	typedef enum
-	{
-	  HAL_OK       = 0x00U,
-	  HAL_ERROR    = 0x01U,
-	  HAL_BUSY     = 0x02U,
-	  HAL_TIMEOUT  = 0x03U
-	} HAL_StatusTypeDef;//*/
-	switch(status){
-	case HAL_OK:str_len = sprintf(str, "HAL_OK\r\n");break;
-	case HAL_ERROR:str_len = sprintf(str, "HAL_ERROR\r\n");break;
-	case HAL_BUSY:str_len = sprintf(str, "HAL_BUSY\r\n");break;
-	case HAL_TIMEOUT:str_len = sprintf(str, "HAL_TIMEOUT\r\n");break;
-	default:str_len = sprintf(str, "HAL_Unknown\r\n");break;
-	}
-	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-	return status != HAL_OK;
+const char cornerTopLeft = 201;
+const char cornerTopRight = 187;
+const char cornerBottomLeft = 200;
+const char cornerBottomRight = 188;
+const char cornerVertical = 186;
+const char cornerHorizontal = 205;
 
+Color getRainbowColor(int h, int v){
+	Color c = {(h+v) %64};
+	return c;
 }
 
-int printState(HAL_DMA_StateTypeDef state){
-	//HAL_DMA_STATE_RESET             = 0x00U,  /*!< DMA not yet initialized or disabled */
-	//HAL_DMA_STATE_READY             = 0x01U,  /*!< DMA initialized and ready for use   */
-	//HAL_DMA_STATE_BUSY              = 0x02U,  /*!< DMA process is ongoing              */
-	//HAL_DMA_STATE_TIMEOUT           = 0x03U,  /*!< DMA timeout state                   */
-	//HAL_DMA_STATE_ERROR             = 0x04U,  /*!< DMA error state                     */
-	//HAL_DMA_STATE_ABORT             = 0x05U,  /*!< DMA Abort state                     */
-	//}HAL_DMA_StateTypeDef;
-	switch(state){
-	case HAL_DMA_STATE_RESET:str_len = sprintf(str, "DMA not yet initialized or disabled\r\n");break;
-	case HAL_DMA_STATE_READY:str_len = sprintf(str, "DMA initialized and ready for use\r\n");break;
-	case HAL_DMA_STATE_BUSY:str_len = sprintf(str, "DMA process is ongoing\r\n");break;
-	case HAL_DMA_STATE_TIMEOUT:str_len = sprintf(str, "DMA timeout state\r\n");break;
-	case HAL_DMA_STATE_ERROR:str_len = sprintf(str, "DMA error state\r\n");break;
-	case HAL_DMA_STATE_ABORT:str_len = sprintf(str, "DMA Abort state\r\n");break;
-	default:str_len = sprintf(str, "DMA_Unknown\r\n");break;
-
+void makeRainbow(){
+	for(int i = 0; i < vertRes; i++){//replaces black pixels with a rainbow pattern
+		for(int j = 0; j < horiRes; j++){
+			if(screenBuff[i*horiRes + j].value == 0){
+				screenBuff[i*horiRes + j] = getRainbowColor(i, j);
+			}
+		}
 	}
-	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-	return state != HAL_DMA_STATE_READY;
+}
+
+void clearScreen(){
+	for(int i = 0; i < vertRes; i++){
+		for(int j = 0; j < horiRes; j++){
+			screenBuff[i*horiRes + j].value = 0b00111111;
+		}
+	}
+}
+
+void makeBorders(){
+	int colums = horiRes / codepage_437.sprite_hori - 1;
+	int rows = vertRes / codepage_437.sprite_vert - 1;
+	Color background = {0b11000000};
+	Color forground = {0};
+	renderCharOnGrid(cornerTopLeft, 0, 0, background, forground, &codepage_437);
+	renderCharOnGrid(cornerTopRight, colums, 0, background, forground, &codepage_437);
+	renderCharOnGrid(cornerBottomLeft, 0, rows, background, forground, &codepage_437);
+	renderCharOnGrid(cornerBottomRight, colums, rows, background, forground, &codepage_437);
+	for(int i = 1; i < colums; i++){
+		renderCharOnGrid(cornerHorizontal, i, 0, background, forground, &codepage_437);
+		renderCharOnGrid(cornerHorizontal, i, rows, background, forground, &codepage_437);
+	}
+	for(int i = 1; i < rows; i++){
+		renderCharOnGrid(cornerVertical, 0, i, background, forground, &codepage_437);
+		renderCharOnGrid(cornerVertical, colums, i, background, forground, &codepage_437);
+	}
+	makeRainbow();
+}
+
+void runTTY(){
+	int init = 0;
+
+	Color background = {0b00111111};
+	Color forground = {0};
+
+	int colums = horiRes / codepage_437.sprite_hori - 1;
+	int rows = vertRes / codepage_437.sprite_vert - 1;
+	int h = 1, v = 1;
+
+	char toPrint;
+
+	char rainbowModeTrigger[] = "rainbow";
+	char *rainbowActivationTracker = rainbowModeTrigger;
+
+	while(1){
+		HAL_StatusTypeDef resStatus = HAL_UART_Receive(&huart2, (uint8_t*)&toPrint, 1, HAL_MAX_DELAY);
+		uint16_t charCode = toPrint;
+		str_len = sprintf(str, "\r\nRecived byte %c code %u HAL %u\r\n", toPrint, charCode, (uint16_t)resStatus);
+		HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+
+		if(init == 0){//clear the screen and draw the window border
+			init = 1;
+			clearScreen();
+			makeBorders();
+		}
+
+
+		if(toPrint == 13){//newline
+			v++;
+			h = 1;
+		}else if(toPrint == 127){//backspace
+			h--;
+			if(h == 0){//beginning of line
+				h = colums - 1;
+				v--;
+			}
+			if(v == 0){//beginning of screen
+				v = rows - 1;
+			}
+			renderCharOnGrid(' ', h, v, background, forground, &codepage_437);
+		}else{//print char
+			renderCharOnGrid(toPrint, h, v, background, forground, &codepage_437);
+			h++;
+		}
+		if(h >= colums){//line wrap
+			v++;
+			h = 1;
+		}
+		if(v >= rows){//screen wrap
+			v = 1;
+		}
+
+		if(toPrint == *rainbowActivationTracker){//replace all black text with rainbow text
+			rainbowActivationTracker++;
+			str_len = sprintf(str, "\r\nNext activation char %c step %i\r\n", *rainbowActivationTracker, (rainbowActivationTracker - rainbowModeTrigger));
+			HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+			if(*rainbowActivationTracker == '\0'){
+				rainbowActivationTracker = rainbowModeTrigger;
+				makeRainbow();
+			}
+		}else{
+			rainbowActivationTracker = rainbowModeTrigger;
+		}
+	}
 }
 
 /* USER CODE END 0 */
@@ -187,7 +250,13 @@ int main(void)
 	str_len = sprintf(str, "Starting up!\r\n");
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
 
-	for(int i = 0; i < vertRes; i++){//load a test pattern
+	vgaSetup(&htim1, &hdma_tim1_up, &hdma_memtomem_dma2_stream0, vgaPin13_Vsync_GPIO_Port, vgaPin13_Vsync_Pin);
+	registerHUARTvga(&huart2);
+
+	vgaStart();//start VGA driver
+	HAL_Delay(5000);//delay rendering for monitor sync
+
+	for(int i = 0; i < vertRes; i++){//load a rainbow test pattern
 		for(int j = 0; j < horiRes; j++){
 			screenBuff[i*horiRes + j].value = 0b00111111;
 			//screenBuff[i*vertRes + j].value = j & 0b111111;
@@ -197,79 +266,48 @@ int main(void)
 		}
 	}
 
-	for(int i = 0; i < vertRes; i++){//load a clear test pattern
-		for(int j = 0; j < horiRes; j++){
-			//screenBuff[i*horiRes + j].value = 0;
-		}
-	}
 	//Write test text
 	Color black;
 	setRGB(&black, 00, 00, 00);
 	Color transparant;
-	transparant.value = 0b00101010;
+	transparant.value = 0b11000000;
 	//vgaUpscale;
-	int h = 10, w = 30, x = 64+8, y = 10;
-	for(int i = y; i < vertRes && i < y+h; i++){//load a clear test pattern
+	int h = 10, w = 30, x = 64+8+8, y = 10;
+	for(int i = y; i < vertRes && i < y+h; i++){//render a black rectangle
 		for(int j = x; j < horiRes && j < x+w; j++){
 			screenBuff[i*horiRes + j] = black;
 		}
 	}
-	y+=Codepage_437_char_hight;
+	y+=codepage_437.sprite_vert;
 	//renderString(str, h, v, background, forground)
-	renderString("Hi", y, x, transparant, black);
+	renderString("Hi", x, y, transparant, black, &codepage_437);
 
+	y+=codepage_437.sprite_vert;
+	renderString("Hello world!", x, y, transparant, black, &codepage_437);
+	y+=codepage_437.sprite_vert;
+	renderString("Press <any> key for TTY", x, y, transparant, black, &codepage_437);
+	y+=codepage_437.sprite_vert;
+	renderChar(177, x, y, transparant, black, &codepage_437);
 
-	vgaSetup(&htim1, &hdma_tim1_up, &hdma_memtomem_dma2_stream0, vgaPin13_Vsync_GPIO_Port, vgaPin13_Vsync_Pin);
-	registerHUART(&huart2);
-	registerDebugInterupts(&hdma_tim1_up);
+	y+=codepage_437.sprite_vert;//test patterns
+	renderChar(201, x, y, transparant, black, &codepage_437);
+	renderChar(187, x + codepage_437.sprite_hori, y, transparant, black, &codepage_437);
+	renderChar(186, x + 2*codepage_437.sprite_hori, y, transparant, black, &codepage_437);
+	y+=codepage_437.sprite_vert;
+	renderChar(200, x, y, transparant, black, &codepage_437);
+	renderChar(188, x + codepage_437.sprite_hori, y, transparant, black, &codepage_437);
 
-
-	//HAL_TIM_Base_Start_IT(&htim5);
-
-	dumpLine();
-	printState(HAL_DMA_GetState(&hdma_memtomem_dma2_stream0));
-	/*
-	str_len = sprintf(str, "\r\n\r\nTesting Memset\r\n");
-	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-
-	printStatus(old_memSet(0, (uint32_t*)&screenBuff[0], 2));//testingMemset
-	printState(HAL_DMA_GetState(&hdma_memtomem_dma2_stream0));
-	dumpLine();
-	while(printStatus(HAL_DMA_PollForTransfer(&hdma_memtomem_dma2_stream0, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
-
-	str_len = sprintf(str, "\r\n\r\nTesting Memcopy\r\n");
-	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-
-	if (HAL_DMA_Init(&hdma_memtomem_dma2_stream0) != HAL_OK) {
-		Error_Handler();
-	}
-	printStatus(old_memCopy((uint32_t*)&screenBuff[8], (uint32_t*)&screenBuff[0], 2));//testingMemcopy
-	printState(HAL_DMA_GetState(&hdma_memtomem_dma2_stream0));
-	dumpLine();
-	while(printStatus(HAL_DMA_PollForTransfer(&hdma_memtomem_dma2_stream0, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
-
-	str_len = sprintf(str, "\r\n\r\nTesting Memset\r\n");
-	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-
-	if (HAL_DMA_Init(&hdma_memtomem_dma2_stream0) != HAL_OK) {
-		Error_Handler();
-	}
-	printStatus(old_memSet(0xff, (uint32_t*)&screenBuff[0], 2));//testingMemset
-	printState(HAL_DMA_GetState(&hdma_memtomem_dma2_stream0));
-	dumpLine();
-	while(printStatus(HAL_DMA_PollForTransfer(&hdma_memtomem_dma2_stream0, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
-	//*/
 	str_len = sprintf(str, "\r\nDone\r\n");
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-
-	vgaStart();
   /* USER CODE END 2 */
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	runTTY();
 	while (1)
 	{
 		profileCount++;
+
 		//HAL_Delay(1);
     /* USER CODE END WHILE */
 

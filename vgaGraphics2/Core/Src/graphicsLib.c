@@ -51,18 +51,18 @@ Color combineColors(Color existing, Color new){
 	}
 }
 
-void renderChar(char c, int h, int v, Color background, Color forground, Sprite_map * font){
+void renderChar(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font){
 	if(h < -font->sprite_hori || h >= horiRes
 		|| v < -font->sprite_vert || v >= vertRes) return;//sprite is outside visible area
 
-	uint8_t * data = font->data;
+	const uint8_t * data = font->data;
 	uint8_t bitBuffer;
 	uint8_t bitsRemaining;
 	{
-		uint32_t bitOffset = c * font->sprite_hori * font->sprite_vert;// 8 + 2
+		uint32_t bitOffset = c * font->sprite_hori * font->sprite_vert + font->sprite_hori - 1;// 8 + 2
 		data += bitOffset / 8; // 0b10xx
 		bitsRemaining = 8 - bitOffset % 8;
-		bitBuffer = *data >> (8 - bitsRemaining);
+		bitBuffer = *data >> (8 - bitsRemaining + 1);
 	}
 	for(int vpx = 0; vpx <  font->sprite_vert; vpx++){
 		for(int hpx = 0; hpx <  font->sprite_hori; hpx++){
@@ -82,13 +82,19 @@ void renderChar(char c, int h, int v, Color background, Color forground, Sprite_
 	}
 }
 
-void renderString(char * str, int h, int v, Color background, Color forground, Sprite_map * font){
+void renderString(char * str, int h, int v, const Color background, const Color forground, const Sprite_map * font){
 	while(*str != 0){
 		renderChar(*str, h, v, background, forground, font);
-		v += font->sprite_hori;
+		h += font->sprite_hori;
 		str++;
 	}
 }
 
 
+void renderCharOnGrid(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font){
+	renderChar(c, h*font->sprite_hori, v*font->sprite_vert, background, forground, font);
+}
 
+void renderStringOnGrid(char * str, int h, int v, const Color background, const Color forground, const Sprite_map * font){
+	renderString(str, h*font->sprite_hori, v*font->sprite_vert, background, forground, font);
+}
