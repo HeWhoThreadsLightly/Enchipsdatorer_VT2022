@@ -34,4 +34,8 @@ STM32micro
 4 bits * 3 colours + 1 sync 13 bits of D latch @40Mhz output current min 17.5 mA
 1 resistor * 3 colurs at 45 ohm voltage divider
 
+4st 4bit D latches for color data and sync
+https://www.elfa.se/en/octal-latch-type-soic-20-nxp-74hct573d/p/17390651?trackQuery=D+latch&pos=1&origPos=1&origPageSize=50&track=true
+4st to 10st 4bit multiplexer for switching color mode, quantity depends on number of modes.
+https://www.elfa.se/en/quad-multiplexer-pdip-41ns-nxp-74hc157n/p/17352214?trackQuery=Multiplexer&pos=1&origPos=1&origPageSize=50&track=true
 
