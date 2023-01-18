@@ -43,7 +43,7 @@
 /* USER CODE END PM */
 
 /* Private variables ---------------------------------------------------------*/
- TIM_HandleTypeDef htim1;
+TIM_HandleTypeDef htim1;
 TIM_HandleTypeDef htim5;
 DMA_HandleTypeDef hdma_tim1_up;
 
@@ -100,7 +100,7 @@ const char cornerVertical = 186;
 const char cornerHorizontal = 205;
 
 Color getRainbowColor(int h, int v){
-	Color c = {(h+v) %64};
+	Color c = {(h+v) %0x1000};
 	return c;
 }
 
@@ -117,7 +117,7 @@ void makeRainbow(){
 void clearScreen(){
 	for(int i = 0; i < vertRes; i++){
 		for(int j = 0; j < horiRes; j++){
-			screenBuff[i*horiRes + j].value = 0b00111111;
+			screenBuff[i*horiRes + j].value = 0xFFF;
 		}
 	}
 }
@@ -125,7 +125,7 @@ void clearScreen(){
 void makeBorders(){
 	int colums = horiRes / codepage_437.sprite_hori - 1;
 	int rows = vertRes / codepage_437.sprite_vert - 1;
-	Color background = {0b11000000};
+	Color background = {0xFFF};
 	Color forground = {0};
 	renderCharOnGrid(cornerTopLeft, 0, 0, background, forground, &codepage_437);
 	renderCharOnGrid(cornerTopRight, colums, 0, background, forground, &codepage_437);
@@ -145,7 +145,7 @@ void makeBorders(){
 void runTTY(){
 	int init = 0;
 
-	Color background = {0b00111111};
+	Color background = {0xFFF};
 	Color forground = {0};
 
 	int colums = horiRes / codepage_437.sprite_hori - 1;
@@ -254,48 +254,50 @@ int main(void)
 	registerHUARTvga(&huart2);
 
 	vgaStart();//start VGA driver
-	HAL_Delay(5000);//delay rendering for monitor sync
-
+	HAL_Delay(500);//delay rendering for monitor sync
+	int cCounter = 0;
 	for(int i = 0; i < vertRes; i++){//load a rainbow test pattern
 		for(int j = 0; j < horiRes; j++){
-			screenBuff[i*horiRes + j].value = 0b00111111;
+			screenBuff[i*horiRes + j] = ColorWhite;
 			//screenBuff[i*vertRes + j].value = j & 0b111111;
 		}
-		for(int j = 0; j<64;j++){
-			screenBuff[i*horiRes + 8 + j].value = 0b00000000 + j%64;// + ((j%4)<<2) + ((j%4)<<4);
+
+		screenBuff[i*horiRes + 4] = ColorRed;
+		screenBuff[i*horiRes + 5] = ColorGreen;
+		screenBuff[i*horiRes + 6] = ColorBlue;
+		for(int j = 0; j<=0xF && 8+j < horiRes ;j++){
+			screenBuff[i*horiRes + 8 + j].value = (j + ((i&0xFF)<<4)) & 0xFFF;
+			cCounter++;
 		}
 	}
 
 	//Write test text
-	Color black;
-	setRGB(&black, 00, 00, 00);
-	Color transparant;
-	transparant.value = 0b11000000;
+	Color textColor = ColorBlack;
 	//vgaUpscale;
 	int h = 10, w = 30, x = 64+8+8, y = 10;
 	for(int i = y; i < vertRes && i < y+h; i++){//render a black rectangle
 		for(int j = x; j < horiRes && j < x+w; j++){
-			screenBuff[i*horiRes + j] = black;
+			screenBuff[i*horiRes + j] = textColor;
 		}
 	}
 	y+=codepage_437.sprite_vert;
 	//renderString(str, h, v, background, forground)
-	renderString("Hi", x, y, transparant, black, &codepage_437);
+	renderString("Hi", x, y, ColorTransparant, textColor, &codepage_437);
 
 	y+=codepage_437.sprite_vert;
-	renderString("Hello world!", x, y, transparant, black, &codepage_437);
+	renderString("Hello world!", x, y, ColorTransparant, textColor, &codepage_437);
 	y+=codepage_437.sprite_vert;
-	renderString("Press <any> key for TTY", x, y, transparant, black, &codepage_437);
+	renderString("Press <any> key for TTY", x, y, ColorTransparant, textColor, &codepage_437);
 	y+=codepage_437.sprite_vert;
-	renderChar(177, x, y, transparant, black, &codepage_437);
+	renderChar(177, x, y, ColorTransparant, textColor, &codepage_437);
 
 	y+=codepage_437.sprite_vert;//test patterns
-	renderChar(201, x, y, transparant, black, &codepage_437);
-	renderChar(187, x + codepage_437.sprite_hori, y, transparant, black, &codepage_437);
-	renderChar(186, x + 2*codepage_437.sprite_hori, y, transparant, black, &codepage_437);
+	renderChar(201, x, y, ColorTransparant, textColor, &codepage_437);
+	renderChar(187, x + codepage_437.sprite_hori, y, ColorTransparant, textColor, &codepage_437);
+	renderChar(186, x + 2*codepage_437.sprite_hori, y, ColorTransparant, textColor, &codepage_437);
 	y+=codepage_437.sprite_vert;
-	renderChar(200, x, y, transparant, black, &codepage_437);
-	renderChar(188, x + codepage_437.sprite_hori, y, transparant, black, &codepage_437);
+	renderChar(200, x, y, ColorTransparant, textColor, &codepage_437);
+	renderChar(188, x + codepage_437.sprite_hori, y, ColorTransparant, textColor, &codepage_437);
 
 	str_len = sprintf(str, "\r\nDone\r\n");
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
@@ -303,6 +305,7 @@ int main(void)
 
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
+	//makeRainbow();
 	runTTY();
 	while (1)
 	{

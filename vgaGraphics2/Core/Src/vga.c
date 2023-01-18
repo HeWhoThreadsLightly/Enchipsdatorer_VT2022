@@ -8,6 +8,7 @@
 
 #include "vga.h"
 #include "main.h"
+#include "graphicsLib.h"
 #include <stdio.h>
 //#include "codepage-437-bmp.h"
 
@@ -183,7 +184,7 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 		//while(HAL_DMA_PollForTransfer(memCopyDMA, HAL_DMA_FULL_TRANSFER, 100)){HAL_Delay(1);};
 		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
 		uint32_t * screen32 = (uint32_t*)&screenBuff[(lineCount/vgaUpscale)*horiRes];
-		for(uint32_t i = 0; i < horiRes/4;i++){
+		for(uint32_t i = 0; i < horiRes/(sizeof(uint32_t)/sizeof(Color));i++){
 			*active32 = *screen32;
 			//*active32 = 0x77777777;
 			++active32;
@@ -195,7 +196,7 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 		ref_str = "clear line";
 #endif
 		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
-		for(uint32_t i = 0; i < horiRes/4; i++){
+		for(uint32_t i = 0; i < horiRes/(sizeof(uint32_t)/sizeof(Color)); i++){
 			*active32 = 0;
 			active32++;
 		}
@@ -204,7 +205,7 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 		ref_str = "clear line";
 #endif
 		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
-		for(uint32_t i = 0; i < horiRes/4; i++){
+		for(uint32_t i = 0; i < horiRes/(sizeof(uint32_t)/sizeof(Color)); i++){
 			*active32 = 0;
 			active32++;
 		}
@@ -294,8 +295,8 @@ void vgaSetup(
 		oldBuffer[i].value = 0x00;
 	}
 	for(uint32_t i = horiFront; i < horiFront + horiSync; i++){//set horizontal sync
-		activeBuffer[i].value = 0x80;
-		oldBuffer[i].value = 0x80;
+		activeBuffer[i] = ColorHsync;
+		oldBuffer[i] = ColorHsync;
 	}
 }
 

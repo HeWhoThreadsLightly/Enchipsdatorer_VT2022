@@ -8,25 +8,40 @@
 #include "graphicsLib.h"
 #include "codepage-437-bmp.h"
 #include "vga.h"
+#include "math.h"
 
+const Color ColorTransparant = {0xC000};
+const Color ColorHsync = {0x1000};
+const Color ColorWhite = {0xFFF};
+const Color ColorBlack = {0x000};
+const Color ColorRed = {0xF00};
+const Color ColorGreen = {0x0F0};
+const Color ColorBlue = {0x00F};
 
 void setRed(Color * c, char r){
-	c->value = (c->value & 0b11001111) | r << 4;
+	uint16_t R = r;
+	c->value = (c->value & ~0xF00) | (R & 0xF) << 8;
 }
 void setGreen(Color * c, char g){
-	c->value = (c->value & 0b11110011) | g;
+	uint16_t G = g;
+	c->value = (c->value & ~0XF0) | (G & 0XF) << 4;
 }
 void setBlue(Color * c, char b){
-	c->value = (c->value & 0b11111100) | b;
+	uint16_t B = b;
+	c->value = (c->value & ~0XF) | (B & 0XF);
 }
 void setRGB(Color * c, char r, char g, char b){
-	c->value = r << 4 | g << 2 | b;
+	uint16_t R = r & 0xF;
+	uint16_t G = g & 0xF;
+	uint16_t B = b & 0xF;
+	c->value = R << 8 | G << 4 | B;
 }
 void setHblank(Color * c){
-	c->value = 0b0100000;
+	c->value = 1 << 12;
 }
+
 void setVblank(Color * c){
-	c->value = 0b1000000;
+	c->value = 0;
 }
 
 int getBitN(uint32_t n, char * buff){
@@ -34,21 +49,25 @@ int getBitN(uint32_t n, char * buff){
 }
 
 Color combineColors(Color existing, Color new){
-	if((existing.value >> 6) & 1){
-		return new;//old color is a empty texture use the new color
+	if((new.value >> 14) == 0b00){//new color is transparent
+		return existing;
 	}
-	switch(new.value>>6){
-	case 0b00: return new;//new color is opaque
-	case 0b11: return existing;//new color is transparent
-	case 0b01://new color is partially opaque or a empty texture
-	case 0b10://new color is partially transparent
-	default:
-		{
-			Color t;
-			t.value = 0b00101010;//purple error not implemented
-			return t;
-		}
+	if((new.value >> 14) == 0b11){//new color is opaque and overwrites the old
+		new.value &= ~(0b11 << 14); //clear the transparency value
+		return new;
 	}
+	float r = ((existing.value >> 8) & 0xF) * ((existing.value >> 8) & 0xF) + ((new.value >> 8) & 0xF) * ((new.value >> 8) & 0xF);
+	float g = ((existing.value >> 4) & 0xF) * ((existing.value >> 4) & 0xF) + ((new.value >> 4) & 0xF) * ((new.value >> 4) & 0xF);
+	float b = ((existing.value >> 0) & 0xF) * ((existing.value >> 0) & 0xF) + ((new.value >> 0) & 0xF) * ((new.value >> 0) & 0xF);
+	uint16_t R = sqrtf(r);
+	uint16_t G = sqrtf(g);
+	uint16_t B = sqrtf(b);
+	if(R > 0xF) R = 0xF;
+	if(G > 0xF) G = 0xF;
+	if(B > 0xF) B = 0xF;
+	Color ret;
+	ret.value = R << 8 | G << 4 | B;
+	return ret;
 }
 
 void renderChar(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font){
