@@ -11,7 +11,7 @@
 #include "main.h"
 
 typedef struct {
-	uint16_t value;
+	char value;
 }Color;
 
 //enum { vgaUpscale = 4 };

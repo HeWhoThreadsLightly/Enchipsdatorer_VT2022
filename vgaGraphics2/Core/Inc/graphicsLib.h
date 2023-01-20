@@ -38,13 +38,4 @@ void renderString(char * str, int h, int v, const Color background, const Color 
 void renderCharOnGrid(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font);
 void renderStringOnGrid(char * str, int h, int v, const Color background, const Color forground, const Sprite_map * font);
 
-extern const Color ColorTransparant;
-extern const Color ColorHsync;
-extern const Color ColorWhite;
-extern const Color ColorBlack;
-extern const Color ColorRed;
-extern const Color ColorGreen;
-extern const Color ColorBlue;
-
-
 #endif /* INC_GRAPHICSLIB_H_ */

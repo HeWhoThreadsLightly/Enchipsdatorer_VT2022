@@ -59,7 +59,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define vgaUpscale 4
+#define vgaUpscale 2
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define vgaPin0_B0_Pin GPIO_PIN_0
@@ -102,7 +102,6 @@ void Error_Handler(void);
 #define vgaPin12_Hsync_GPIO_Port GPIOC
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
-
 /* USER CODE BEGIN Private defines */
 
 extern UART_HandleTypeDef huart2;
