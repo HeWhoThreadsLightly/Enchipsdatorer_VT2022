@@ -59,7 +59,7 @@ void Error_Handler(void);
 /* USER CODE END EFP */
 
 /* Private defines -----------------------------------------------------------*/
-#define vgaUpscale 2
+#define vgaUpscale 4
 #define B1_Pin GPIO_PIN_13
 #define B1_GPIO_Port GPIOC
 #define vgaPin0_B0_Pin GPIO_PIN_0
