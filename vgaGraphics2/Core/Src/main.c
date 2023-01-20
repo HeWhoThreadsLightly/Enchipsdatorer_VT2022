@@ -306,7 +306,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	//makeRainbow();
-	runTTY();
+	//runTTY();
 	while (1)
 	{
 		profileCount++;
