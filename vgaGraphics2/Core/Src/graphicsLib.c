@@ -70,6 +70,7 @@ Color combineColors(Color existing, Color new){
 	return ret;
 }
 
+
 void renderChar(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font){
 	if(h < -font->sprite_hori || h >= horiRes
 		|| v < -font->sprite_vert || v >= vertRes) return;//sprite is outside visible area
@@ -93,7 +94,8 @@ void renderChar(char c, int h, int v, const Color background, const Color forgro
 			if(		!(v + vpx < 0 || v + vpx >= vertRes) &&//row is outside screen
 					!(h + hpx < 0 || h + hpx >= horiRes)){ //pixel is outside screen
 				uint32_t pos = (v + vpx) * horiRes + h + hpx;
-				screenBuff[pos] = combineColors(screenBuff[pos], bitBuffer&1 ? forground : background);
+				//todo beam raise characters
+				//screenBuff[pos] = combineColors(screenBuff[pos], bitBuffer&1 ? forground : background);
 			}
 			bitsRemaining--;
 			bitBuffer >>= 1;
