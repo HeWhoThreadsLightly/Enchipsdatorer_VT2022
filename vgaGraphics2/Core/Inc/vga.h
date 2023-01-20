@@ -20,7 +20,7 @@ enum { vertRes = 400/vgaUpscale};
 
 //main buffers
 extern Color lineBuff [];//double  buffered = horiWhole*2
-//extern Color screenBuff [];//horiRes*vertRes
+extern Color screenBuff [];//horiRes*vertRes
 
 //hardware interfaces
 extern TIM_HandleTypeDef * vgaPixelTimer;

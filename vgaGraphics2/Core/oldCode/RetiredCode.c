@@ -15,9 +15,9 @@ void dumpLine(){
 	int str_len = 0;
 
 	for(int i = 0; i < 40; i++){
-		//int tmp = screenBuff[i].value;
-		//str_len = sprintf(str, "%02x ", tmp);
-		//HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+		int tmp = screenBuff[i].value;
+		str_len = sprintf(str, "%02x ", tmp);
+		HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
 	}
 	str_len = sprintf(str, "\r\n");
 	HAL_UART_Transmit(&huart2, (uint8_t*) str, str_len, HAL_MAX_DELAY);
@@ -70,7 +70,6 @@ int printState(HAL_DMA_StateTypeDef state){
 	return state != HAL_DMA_STATE_READY;
 }
 
-/*
 void memFunDebug(){
 	char str[81] = {'0'};
 	int str_len = 0;
@@ -107,6 +106,5 @@ void memFunDebug(){
 	printState(HAL_DMA_GetState(&hdma_memtomem_dma2_stream0));
 	dumpLine();
 	while(printStatus(HAL_DMA_PollForTransfer(&hdma_memtomem_dma2_stream0, HAL_DMA_FULL_TRANSFER, 100))){HAL_Delay(1000);};
-
+	//*/
 }
-//*/

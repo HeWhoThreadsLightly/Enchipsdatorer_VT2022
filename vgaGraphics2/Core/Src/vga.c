@@ -60,7 +60,7 @@ enum { vertWhole = 449};
 
 //main buffers
 _Alignas(uint32_t) Color lineBuff[horiWhole*2] = {0};//double  buffered
-//_Alignas(uint32_t) Color screenBuff[horiRes*vertRes] = {0};//rows*columns
+_Alignas(uint32_t) Color screenBuff[horiRes*vertRes] = {0};//rows*columns
 
 //hardware interfaces
 TIM_HandleTypeDef * vgaPixelTimer;
@@ -84,7 +84,7 @@ UART_HandleTypeDef * huartE = NULL;
 void checkAsserts(){//check memory layout assumptions
 	//32 bit accesses is used to sped up dma transfers alignment of start and end is needed to avoid manual copying of leading and trailing bytes
 	_Static_assert((int)&lineBuff % sizeof(uint32_t) == 0, "Line buff is not aligned for uint32 accesses");
-	//_Static_assert((int)&screenBuff % sizeof(uint32_t) == 0, "Screen buff is not aligned for uint32 accesses");
+	_Static_assert((int)&screenBuff % sizeof(uint32_t) == 0, "Screen buff is not aligned for uint32 accesses");
 
 	//checks that 32 bit mode works for all subsets of the line buffer
 	_Static_assert(horiRes % sizeof(uint32_t) == 0, "Horizontal area is not 32 bit aligned");
@@ -103,15 +103,12 @@ void registerHUARTvga(UART_HandleTypeDef * huart){
 
 void __weak renderLine(Color * lineBuffPart, const int lineCount){
 	//both buffers are 32 bit aligned
-	if(lineCount % 2 == 1){
-		for(uint32_t i = 0; i < horiRes; i++){//load test data
-			lineBuffPart[i] = ColorWhite;
-		}
-	}else{
-		for(uint32_t i = 0; i < horiRes; i++){//load test data
-			lineBuffPart[i] = ColorBlue;
-		}
-	}
+
+	char str[81] = { '\0' };
+	int str_len = sprintf(str, "Rendering line %i\r\n", lineCount);
+	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
+	//copy the current line of the screen buffer in to the line buffer
+	//old_memCopy((uint32_t*)&screenBuff[horiRes*lineCount], (uint32_t *)&lineBuffPart[horiFront+horiSync+horiBack], horiRes/4);
 }
 
 
@@ -183,8 +180,17 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 #ifdef vgaDebug
 		ref_str = "render line";
 #endif
-		renderLine(&activeBuffer[horiWhole-horiRes], lineCount);//call user render line function
-
+		//renderLine(activeBuffer, lineCount);
+		//while(HAL_DMA_PollForTransfer(memCopyDMA, HAL_DMA_FULL_TRANSFER, 100)){HAL_Delay(1);};
+		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
+		uint32_t * screen32 = (uint32_t*)&screenBuff[(lineCount/vgaUpscale)*horiRes];
+		for(uint32_t i = 0; i < horiRes/(sizeof(uint32_t)/sizeof(Color));i++){
+			*active32 = *screen32;
+			//*active32 = 0x77777777;
+			++active32;
+			++screen32;
+			//activeBuffer[i] = screenBuff[lineCount*vertRes + i];
+		}
 	}else if(lineCount == vertArea){//last line clear
 #ifdef vgaDebug
 		ref_str = "clear line";
@@ -284,11 +290,9 @@ void vgaSetup(
 		activeBuffer[i].value = 0;
 		oldBuffer[i].value = 0;
 	}
-	Color * tmpA = &activeBuffer[horiWhole-horiRes];
-	Color * tmpO = &oldBuffer[horiWhole-horiRes];
 	for(uint32_t i = 0; i < horiRes; i++){//load test data
-		tmpA[i] = ColorWhite;
-		tmpO[i] = ColorBlue;
+		activeBuffer[i].value = 0x0;
+		oldBuffer[i].value = 0x00;
 	}
 	for(uint32_t i = horiFront; i < horiFront + horiSync; i++){//set horizontal sync
 		activeBuffer[i] = ColorHsync;

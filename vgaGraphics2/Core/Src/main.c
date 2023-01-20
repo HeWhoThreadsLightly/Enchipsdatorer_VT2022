@@ -105,11 +105,21 @@ Color getRainbowColor(int h, int v){
 }
 
 void makeRainbow(){
-
+	for(int i = 0; i < vertRes; i++){//replaces black pixels with a rainbow pattern
+		for(int j = 0; j < horiRes; j++){
+			if(screenBuff[i*horiRes + j].value == 0){
+				screenBuff[i*horiRes + j] = getRainbowColor(i, j);
+			}
+		}
+	}
 }
 
 void clearScreen(){
-
+	for(int i = 0; i < vertRes; i++){
+		for(int j = 0; j < horiRes; j++){
+			screenBuff[i*horiRes + j].value = 0xFFF;
+		}
+	}
 }
 
 void makeBorders(){
@@ -245,10 +255,31 @@ int main(void)
 
 	vgaStart();//start VGA driver
 	HAL_Delay(500);//delay rendering for monitor sync
+	int cCounter = 0;
+	for(int i = 0; i < vertRes; i++){//load a rainbow test pattern
+		for(int j = 0; j < horiRes; j++){
+			screenBuff[i*horiRes + j] = ColorWhite;
+			//screenBuff[i*vertRes + j].value = j & 0b111111;
+		}
 
+		screenBuff[i*horiRes + 4] = ColorRed;
+		screenBuff[i*horiRes + 5] = ColorGreen;
+		screenBuff[i*horiRes + 6] = ColorBlue;
+		for(int j = 0; j<=0xF && 8+j < horiRes ;j++){
+			screenBuff[i*horiRes + 8 + j].value = (j + ((i&0xFF)<<4)) & 0xFFF;
+			cCounter++;
+		}
+	}
+
+	//Write test text
 	Color textColor = ColorBlack;
-	int y = 10;
-	int x = 10;
+	//vgaUpscale;
+	int h = 10, w = 30, x = 64+8+8, y = 10;
+	for(int i = y; i < vertRes && i < y+h; i++){//render a black rectangle
+		for(int j = x; j < horiRes && j < x+w; j++){
+			screenBuff[i*horiRes + j] = textColor;
+		}
+	}
 	y+=codepage_437.sprite_vert;
 	//renderString(str, h, v, background, forground)
 	renderString("Hi", x, y, ColorTransparant, textColor, &codepage_437);
@@ -275,7 +306,7 @@ int main(void)
   /* Infinite loop */
   /* USER CODE BEGIN WHILE */
 	//makeRainbow();
-	//runTTY();
+	runTTY();
 	while (1)
 	{
 		profileCount++;
