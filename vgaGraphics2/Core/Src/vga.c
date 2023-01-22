@@ -71,9 +71,6 @@ uint16_t Vsync_Pin;
 
 //state machine state defined in vgaSetup
 int lineCount;//start right after a vertical sync
-int lineUpscale;//copy old buffer if non zero
-int readyForNextLine;
-int vgaCantKeepUpp = 0;
 Color * activeBuffer;
 Color * oldBuffer;
 
@@ -99,17 +96,6 @@ void checkAsserts(){//check memory layout assumptions
 void registerHUARTvga(UART_HandleTypeDef * huart){
 	huartE = huart;
 }
-
-void __weak renderLine(Color * lineBuffPart, const int lineCount){
-	//both buffers are 32 bit aligned
-
-	char str[81] = { '\0' };
-	int str_len = sprintf(str, "Rendering line %i\r\n", lineCount);
-	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-	//copy the current line of the screen buffer in to the line buffer
-	//old_memCopy((uint32_t*)&screenBuff[horiRes*lineCount], (uint32_t *)&lineBuffPart[horiFront+horiSync+horiBack], horiRes/4);
-}
-
 
 char strDumpBuff[1000];
 void dumpBuffer(char * dump, uint32_t bytes, uint32_t * indicatorLength, char * indicator, uint32_t columnSets){
@@ -179,16 +165,12 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 #ifdef vgaDebug
 		ref_str = "render line";
 #endif
-		//renderLine(activeBuffer, lineCount);
-		//while(HAL_DMA_PollForTransfer(memCopyDMA, HAL_DMA_FULL_TRANSFER, 100)){HAL_Delay(1);};
 		uint32_t * active32 = (uint32_t*)&activeBuffer[horiWhole-horiRes];
 		uint32_t * screen32 = (uint32_t*)&screenBuff[(lineCount/vgaUpscale)*horiRes];
 		for(uint32_t i = 0; i < horiRes/4;i++){
 			*active32 = *screen32;
-			//*active32 = 0x77777777;
 			++active32;
 			++screen32;
-			//activeBuffer[i] = screenBuff[lineCount*vertRes + i];
 		}
 	}else if(lineCount == vertArea){//last line clear
 #ifdef vgaDebug
@@ -236,32 +218,11 @@ void __attribute__((optimize("O3"))) vgaDriver(){
 }
 
 void vgaHalfCallBack(DMA_HandleTypeDef *_hdma){
-	//readyForNextLine++;
 	vgaDriver();
 }
 
 void vgaFullCallBack(DMA_HandleTypeDef *_hdma){
-	//readyForNextLine++;
 	vgaDriver();
-}
-
-void reportOVerspeed(){
-	char str[81] = { '\0' };
-	int str_len = sprintf(str, "VGA can't keep up %i\r\n", vgaCantKeepUpp);
-	HAL_UART_Transmit(huartE, (uint8_t*) str, str_len, HAL_MAX_DELAY);
-}
-
-void vgaLoop(){
-	while(1){
-		if(readyForNextLine){
-			vgaDriver();
-			if(readyForNextLine > 1){
-				vgaCantKeepUpp++;
-				//reportOVerspeed();
-			}
-			readyForNextLine--;
-		}
-	}
 }
 
 void vgaSetup(
@@ -279,19 +240,13 @@ void vgaSetup(
 	Vsync_GPIO_Port = Vsync_GPIO_Port_;
 	Vsync_Pin = Vsync_Pin_;
 
-	lineCount = 0; //vertArea + vertFront - 1 - 2;//start right after a vertical sync
-	lineUpscale = 0;//copy old buffer if non zero
-	readyForNextLine = 1;
+	lineCount = 0;
 	activeBuffer = lineBuff;
 	oldBuffer = &lineBuff[horiWhole];
 
 	for(uint32_t i = 0; i < horiWhole; i += 2){//clear all
 		activeBuffer[i].value = 0;
 		oldBuffer[i].value = 0;
-	}
-	for(uint32_t i = 0; i < horiRes; i++){//load test data
-		activeBuffer[i].value = 0x0;
-		oldBuffer[i].value = 0x00;
 	}
 	for(uint32_t i = horiFront; i < horiFront + horiSync; i++){//set horizontal sync
 		activeBuffer[i].value = 0x80;
@@ -301,8 +256,6 @@ void vgaSetup(
 
 void vgaStart(){
 
-	//dumpBuffer((char*)screenBuff, horiRes*vertRes, NULL, "", 2);
-	//HAL_DMA_Init(vgaCircularDMA);
 	__HAL_TIM_ENABLE_DMA(vgaPixelTimer, TIM_DMA_UPDATE);
 	__HAL_TIM_ENABLE(vgaPixelTimer);
 
@@ -310,13 +263,9 @@ void vgaStart(){
 
 	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_HALFCPLT_CB_ID, vgaHalfCallBack);
 	HAL_DMA_RegisterCallback(vgaCircularDMA, HAL_DMA_XFER_CPLT_CB_ID, vgaFullCallBack);
-	//__HAL_TIM_ENABLE(&htim5);
 
 	//start the circular buffer dma transfer aka vga main loop
 	HAL_DMA_Start_IT(vgaCircularDMA, (uint32_t)&lineBuff[0], (uint32_t)&(GPIOC->ODR), horiWhole*2);
-
-	//HAL_DMAEx_MultiBufferStart_IT(hdma, SrcAddress, DstAddress, SecondMemAddress, DataLength);
-	//vgaLoop();
 }
 
 void vgaStop(){

@@ -1,0 +1,3 @@
+../Core/Src/TTY.c:15:6:clearScreen	16	static
+../Core/Src/TTY.c:23:6:makeBorders	32	static
+../Core/Src/TTY.c:41:6:runTTY	160	static

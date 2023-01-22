@@ -10,6 +10,14 @@
 
 #include "vga.h"
 
+extern const Color ColorRainbow;
+extern const Color ColorTransparent;
+extern const Color ColorWhite;
+extern const Color ColorBlack;
+extern const Color ColorRed;
+extern const Color ColorGreen;
+extern const Color ColorBlue;
+
 void setRed(Color * c, char r);
 void setGreen(Color * c, char g);
 void setBlue(Color * c, char b);
@@ -30,7 +38,7 @@ typedef struct Sprite_map{
 	uint8_t data[];
 } Sprite_map;
 
-
+Color getRainbowColor(int h, int v);
 Color combineColors(Color existing, Color new);
 void renderChar(char c, int h, int v, const Color background, const Color forground, const Sprite_map * font);
 void renderString(char * str, int h, int v, const Color background, const Color forground, const Sprite_map * font);

@@ -28,10 +28,7 @@ extern DMA_HandleTypeDef * vgaCircularDMA;
 extern DMA_HandleTypeDef * memCopyDMA;
 
 //state machine state defined in vgaSetup
-extern int lineCount;//start right after a vertical sync
-extern int lineUpscale;//copy old buffer if non zero
-extern int readyForNextLine;
-extern int vgaCantKeepUpp;
+extern int lineCount;
 extern Color * activeBuffer;
 extern Color * oldBuffer;
 

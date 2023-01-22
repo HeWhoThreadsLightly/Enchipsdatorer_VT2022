@@ -102,6 +102,7 @@ void Error_Handler(void);
 #define vgaPin12_Hsync_GPIO_Port GPIOC
 #define SWO_Pin GPIO_PIN_3
 #define SWO_GPIO_Port GPIOB
+
 /* USER CODE BEGIN Private defines */
 
 extern UART_HandleTypeDef huart2;

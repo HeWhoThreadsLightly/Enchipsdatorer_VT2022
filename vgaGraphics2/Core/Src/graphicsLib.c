@@ -9,6 +9,14 @@
 #include "codepage-437-bmp.h"
 #include "vga.h"
 
+const Color ColorRainbow 	= {0b10000000};
+const Color ColorTransparent= {0b11000000};
+const Color ColorWhite 		= {0b00111111};
+const Color ColorBlack 		= {0b00000000};
+const Color ColorRed 		= {0b00110000};
+const Color ColorGreen 		= {0b00001100};
+const Color ColorBlue 		= {0b00000011};
+
 
 void setRed(Color * c, char r){
 	c->value = (c->value & 0b11001111) | r << 4;
@@ -31,6 +39,11 @@ void setVblank(Color * c){
 
 int getBitN(uint32_t n, char * buff){
 	return (buff[n/8] >> (n%8)) & 0b1;
+}
+
+Color getRainbowColor(int h, int v){
+	Color c = {(h+v) %64};
+	return c;
 }
 
 Color combineColors(Color existing, Color new){
@@ -74,7 +87,11 @@ void renderChar(char c, int h, int v, const Color background, const Color forgro
 			if(		!(v + vpx < 0 || v + vpx >= vertRes) &&//row is outside screen
 					!(h + hpx < 0 || h + hpx >= horiRes)){ //pixel is outside screen
 				uint32_t pos = (v + vpx) * horiRes + h + hpx;
-				screenBuff[pos] = combineColors(screenBuff[pos], bitBuffer&1 ? forground : background);
+				Color pxColor = bitBuffer&1 ? forground : background;
+				if(pxColor.value == ColorRainbow.value){
+					pxColor = getRainbowColor(h + hpx, v + vpx);
+				}
+				screenBuff[pos] = combineColors(screenBuff[pos], pxColor);
 			}
 			bitsRemaining--;
 			bitBuffer >>= 1;
